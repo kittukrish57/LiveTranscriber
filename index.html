@@ -279,6 +279,69 @@
                     <span>Run in Background</span>
                 </button>
                 <p class="server-hint">Run <code>python whisper_server.py</code> first</p>
+                <button id="setupGuideBtn" class="btn btn-link">Setup Guide</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Setup Guide Modal -->
+    <div id="setupGuideModal" class="modal hidden">
+        <div class="modal-content setup-guide">
+            <div class="modal-header">
+                <h3>Whisper Server Setup</h3>
+                <button id="closeSetupGuide" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="setup-intro">To transcribe audio files, you need to run a local server. Follow these steps once:</p>
+
+                <div class="setup-step">
+                    <span class="step-number">1</span>
+                    <div class="step-content">
+                        <h4>Install Python</h4>
+                        <p>Download from <a href="https://python.org/downloads" target="_blank">python.org/downloads</a></p>
+                        <p class="step-note">During install, check "Add Python to PATH"</p>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <span class="step-number">2</span>
+                    <div class="step-content">
+                        <h4>Install FFmpeg</h4>
+                        <p>Open Command Prompt and run:</p>
+                        <code class="command">winget install ffmpeg</code>
+                        <p class="step-note">Mac: <code>brew install ffmpeg</code></p>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <span class="step-number">3</span>
+                    <div class="step-content">
+                        <h4>Install Python packages</h4>
+                        <code class="command">pip install flask flask-cors openai-whisper</code>
+                        <p class="step-note">This may take a few minutes</p>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <span class="step-number">4</span>
+                    <div class="step-content">
+                        <h4>Download whisper_server.py</h4>
+                        <p><a href="https://github.com/kittukrish57/LiveTranscriber/blob/main/whisper_server.py" target="_blank">Click here to view</a> → Click "Raw" → Save as whisper_server.py</p>
+                    </div>
+                </div>
+
+                <div class="setup-step">
+                    <span class="step-number">5</span>
+                    <div class="step-content">
+                        <h4>Start the server</h4>
+                        <code class="command">py whisper_server.py</code>
+                        <p class="step-note">Keep this window open while using file upload</p>
+                    </div>
+                </div>
+
+                <div class="setup-done">
+                    <p>Once the server shows "Running on http://localhost:5000", come back here and upload your file!</p>
+                </div>
             </div>
         </div>
     </div>

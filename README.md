@@ -1,107 +1,167 @@
 # Live Transcriber Pro
 
-Real-time speech-to-text transcription app that works in your browser.
+Real-time speech-to-text transcription app. Works in your browser, no account needed.
 
-## Quick Start (2 steps)
+## Quick Start
 
-### Step 1: Generate Icons (one-time)
-1. Open `generate-icons.html` in Chrome
-2. Click both download buttons
-3. Move downloaded files to `icons/` folder as `icon-192.png` and `icon-512.png`
+**Open this URL:**
+```
+https://kittukrish57.github.io/LiveTranscriber/
+```
 
-### Step 2: Start the App
-1. Open a terminal in this folder
-2. Run: `python -m http.server 8000`
-3. Open http://localhost:8000 in Chrome
+Click **Start** → Speak → See text appear. That's it!
 
-## Install as App (PWA)
+### Install as App (Optional)
 
-Once running, Chrome will show an install icon in the address bar:
-- Click the install icon (or Menu > Install Live Transcriber)
-- The app will open in its own window and work offline!
+**iPhone/iPad:**
+1. Open the URL in **Safari** (not Chrome)
+2. Tap the **Share** button (box with arrow)
+3. Scroll down, tap **"Add to Home Screen"**
+4. Tap **Add**
 
-### On iPhone/Android
-1. Open http://localhost:8000 in Chrome/Safari
-2. Tap Share > Add to Home Screen
-3. The app icon appears on your home screen
+**Android:**
+1. Open the URL in Chrome
+2. Tap menu (3 dots) → **"Add to Home Screen"** or **"Install"**
+
+**Windows/Mac:**
+1. Open the URL in Chrome
+2. Click the install icon in address bar (right side)
+3. Click **Install**
+
+---
 
 ## Features
 
-- **Real-time transcription** - Uses browser's speech recognition
-- **Live Mode** - Faster visual updates
-- **Auto-paragraph** - Breaks text on natural pauses
-- **No Fillers** - Removes "uh", "um", "like"
-- **Export** - Save as .txt, .srt, or .json
-- **Record Audio** - Capture audio while transcribing
-- **Dark/Light theme** - Press T to toggle
-- **Search** - Ctrl+F to search transcript
+| Feature | Description |
+|---------|-------------|
+| Live Transcription | Real-time speech-to-text using your microphone |
+| Audio Recording | Record audio while transcribing |
+| Export | Save as .txt, .srt subtitles, or .json |
+| Search | Find text in your transcript (Ctrl+F) |
+| Themes | Dark and light mode (press T) |
+| Offline | Works without internet after install |
 
-## Audio File Upload (Requires Whisper Server)
+---
 
-For transcribing pre-recorded audio files:
+## Audio File Upload (Advanced)
 
-### One-time Setup
-```bash
-# Install Python dependencies
-pip install flask flask-cors openai-whisper
+Want to transcribe a pre-recorded audio file (MP3, WAV, etc.)? This requires a one-time setup on your PC.
 
-# Install FFmpeg (Windows)
+### Step 1: Install Python
+
+1. Go to [python.org/downloads](https://python.org/downloads)
+2. Download and run the installer
+3. **IMPORTANT:** Check the box **"Add Python to PATH"** during installation
+
+### Step 2: Install FFmpeg
+
+Open **Command Prompt** (search "cmd" in Start menu) and run:
+
+**Windows:**
+```
 winget install ffmpeg
 ```
 
-### Start Whisper Server
-```bash
-python whisper_server.py
+**Mac:**
 ```
-Then click the folder icon in the app to upload audio files.
+brew install ffmpeg
+```
+
+### Step 3: Install Python Packages
+
+In Command Prompt, run:
+```
+pip install flask flask-cors openai-whisper
+```
+
+This downloads the Whisper AI model (~1-2 GB). Wait for it to complete.
+
+### Step 4: Download the Server File
+
+1. Go to: https://github.com/kittukrish57/LiveTranscriber
+2. Click on `whisper_server.py`
+3. Click **"Raw"** button (top right)
+4. Right-click → **Save As** → Save to your computer
+
+### Step 5: Start the Server
+
+Open Command Prompt, navigate to where you saved the file, and run:
+```
+py whisper_server.py
+```
+
+You should see:
+```
+* Running on http://127.0.0.1:5000
+```
+
+**Keep this window open!**
+
+### Step 6: Upload Your File
+
+1. Open the Live Transcriber app
+2. Click the **folder icon** (top right)
+3. Upload your audio file
+4. Click **Transcribe**
+
+---
 
 ## Keyboard Shortcuts
 
 | Key | Action |
 |-----|--------|
-| Space | Start/Stop |
+| Space | Start/Stop transcription |
 | R | Record audio |
-| T | Toggle theme |
+| T | Toggle dark/light theme |
 | E | Edit mode |
 | C | Copy transcript |
 | Ctrl+Z | Undo |
 | Ctrl+F | Search |
 | Ctrl+S | Export |
 
-## Sharing with Friends
-
-Just copy this whole folder to their computer. They need:
-- Google Chrome (recommended) or Edge browser
-- Python 3 (for running the local server)
-- For Whisper uploads: Python packages listed above
+---
 
 ## Troubleshooting
 
-**Microphone not working?**
-- Allow microphone permission when prompted
-- Check Chrome settings: chrome://settings/content/microphone
+### Microphone not working?
+- Click "Allow" when browser asks for microphone permission
+- Check browser settings: Chrome → Settings → Privacy → Microphone
 
-**Speech recognition not available?**
-- Use Chrome or Edge (Firefox/Safari don't support Web Speech API)
-- Must be served via localhost or HTTPS
+### Speech recognition not working?
+- Use **Google Chrome** or **Microsoft Edge** (Firefox and Safari don't support Web Speech API)
+- Make sure you're not in a very noisy environment
 
-**Whisper server not connecting?**
-- Make sure `python whisper_server.py` is running
-- Check that FFmpeg is installed: `ffmpeg -version`
+### Whisper server not connecting?
+- Make sure `py whisper_server.py` is running in Command Prompt
+- Check that FFmpeg is installed: run `ffmpeg -version`
+- Try restarting the server
 
-## File Structure
+### App shows 404 on iPhone?
+- Clear Safari cache: Settings → Safari → Clear History and Website Data
+- Re-add to Home Screen
+
+---
+
+## Privacy
+
+- All transcription happens **locally** on your device
+- Your audio and text **never leave your device**
+- No accounts, no cloud, no tracking
+- Each person's data stays on their own device
+
+---
+
+## For Developers
+
+Clone and run locally:
+```bash
+git clone https://github.com/kittukrish57/LiveTranscriber.git
+cd LiveTranscriber
+py -m http.server 8000
 ```
-LiveTranscriber/
-├── index.html          # Main app page
-├── app.js              # Application logic
-├── style.css           # Styles
-├── manifest.json       # PWA manifest
-├── service-worker.js   # Offline support
-├── whisper_server.py   # Whisper API server
-├── icons/              # App icons
-│   ├── icon-192.png
-│   └── icon-512.png
-└── generate-icons.html # Icon generator
-```
 
-Enjoy transcribing!
+Open http://localhost:8000
+
+---
+
+Made with Claude AI

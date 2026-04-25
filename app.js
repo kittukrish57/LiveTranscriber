@@ -220,7 +220,11 @@ class LiveTranscriber {
             serverStatus: document.getElementById('serverStatus'),
             transcribeBtn: document.getElementById('transcribeBtn'),
             transcribeBackground: document.getElementById('transcribeBackground'),
-            uploadEstimate: document.getElementById('uploadEstimate')
+            uploadEstimate: document.getElementById('uploadEstimate'),
+            // Setup guide modal
+            setupGuideBtn: document.getElementById('setupGuideBtn'),
+            setupGuideModal: document.getElementById('setupGuideModal'),
+            closeSetupGuide: document.getElementById('closeSetupGuide')
         };
 
         // Upload state
@@ -431,6 +435,19 @@ class LiveTranscriber {
             this.els.uploadZone.classList.remove('dragover');
             const file = e.dataTransfer.files[0];
             if (file) this.handleFileSelect(file);
+        };
+
+        // Setup guide modal
+        this.els.setupGuideBtn.onclick = () => {
+            this.els.setupGuideModal.classList.remove('hidden');
+        };
+        this.els.closeSetupGuide.onclick = () => {
+            this.els.setupGuideModal.classList.add('hidden');
+        };
+        this.els.setupGuideModal.onclick = (e) => {
+            if (e.target === this.els.setupGuideModal) {
+                this.els.setupGuideModal.classList.add('hidden');
+            }
         };
 
         // Smart scroll detection - allow user to scroll up without being pulled back down
