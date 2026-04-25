@@ -1,5 +1,5 @@
 // Live Transcriber Pro - Service Worker
-const CACHE_NAME = 'transcriber-v5.9';
+const CACHE_NAME = 'transcriber-v6.0';
 const ASSETS = [
   './',
   './index.html',
@@ -36,9 +36,12 @@ self.addEventListener('activate', (event) => {
 
 // Fetch - serve from cache, fallback to network
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests and Whisper server requests
+  const url = event.request.url;
+
+  // Skip non-GET requests, non-http(s) schemes, and Whisper server
   if (event.request.method !== 'GET' ||
-      event.request.url.includes('localhost:5000')) {
+      (!url.startsWith('http://') && !url.startsWith('https://')) ||
+      url.includes('localhost:5000')) {
     return;
   }
 
