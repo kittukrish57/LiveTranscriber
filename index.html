@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Transcriber Pro</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Live Transcriber</title>
     <link rel="stylesheet" href="style.css">
 
     <!-- PWA Support -->
@@ -16,32 +16,142 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
+        <!-- Minimal Header -->
         <header class="header">
             <div class="logo">
                 <span class="logo-icon">&#9432;</span>
                 <h1>Live Transcriber</h1>
             </div>
-            <div class="header-controls">
-                <button id="uploadBtn" class="icon-btn" title="Upload Audio File">
-                    <span>&#128193;</span>
+            <div class="header-actions">
+                <button id="searchToggle" class="header-btn" title="Search (Ctrl+F)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                    </svg>
                 </button>
-                <button id="themeToggle" class="icon-btn" title="Toggle Theme (T)">
+                <button id="themeToggle" class="header-btn" title="Toggle Theme">
                     <span class="theme-icon">&#9790;</span>
                 </button>
-                <button id="settingsBtn" class="icon-btn" title="Settings">
-                    <span>&#9881;</span>
+                <button id="settingsBtn" class="header-btn" title="Settings">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
+                    </svg>
                 </button>
             </div>
         </header>
 
-        <!-- Settings Panel -->
-        <div id="settingsPanel" class="settings-panel hidden">
-            <div class="settings-header">
-                <h3>Settings</h3>
-                <button id="closeSettings" class="close-btn">&times;</button>
+        <!-- Search Bar (Hidden by default) -->
+        <div id="searchBar" class="search-bar hidden">
+            <input type="text" id="searchInput" placeholder="Search in transcript..." />
+            <span id="searchResults" class="search-results"></span>
+            <button id="searchPrev" class="search-nav" disabled>&lt;</button>
+            <button id="searchNext" class="search-nav" disabled>&gt;</button>
+            <button id="clearSearch" class="search-clear">&times;</button>
+        </div>
+
+        <!-- Transcript Area (Main Content) -->
+        <div class="transcript-wrapper">
+            <div class="transcript-container" id="transcriptContainer">
+                <div id="transcript" class="transcript" contenteditable="false">
+                    <div class="placeholder-content">
+                        <div class="placeholder-icon">&#127908;</div>
+                        <p class="placeholder-text">Tap the microphone to start transcribing</p>
+                        <p class="placeholder-hint">Your speech will appear here in real-time</p>
+                    </div>
+                </div>
             </div>
-            <div class="settings-content">
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-item">
+                <span id="duration" class="duration">00:00</span>
+            </div>
+            <div class="audio-visualizer" id="audioVisualizer">
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+                <div class="visualizer-bar"></div>
+            </div>
+            <div class="status-item">
+                <span id="wordCount" class="word-count">0 words</span>
+            </div>
+        </div>
+
+        <!-- Bottom Action Bar -->
+        <div class="action-bar">
+            <button id="copyBtn" class="action-btn" title="Copy">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                <span>Copy</span>
+            </button>
+
+            <button id="micBtn" class="mic-btn" title="Start/Stop (Space)">
+                <div class="mic-btn-inner">
+                    <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                        <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                    </svg>
+                    <svg class="stop-icon hidden" viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="2"/>
+                    </svg>
+                </div>
+                <div class="mic-pulse"></div>
+            </button>
+
+            <button id="exportBtn" class="action-btn" title="Export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                <span>Export</span>
+            </button>
+        </div>
+
+        <!-- Context Actions (shown when needed) -->
+        <div id="contextActions" class="context-actions hidden">
+            <button id="recordBtn" class="context-btn" title="Record Audio">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="8"/>
+                </svg>
+                <span>Record</span>
+            </button>
+            <button id="undoBtn" class="context-btn" title="Undo">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                </svg>
+                <span>Undo</span>
+            </button>
+            <button id="editBtn" class="context-btn" title="Edit">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+                <span>Edit</span>
+            </button>
+            <button id="clearBtn" class="context-btn danger" title="Clear">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+                <span>Clear</span>
+            </button>
+        </div>
+
+        <!-- Recording Indicator -->
+        <div id="recordingIndicator" class="recording-indicator hidden">
+            <span class="rec-dot"></span>
+            <span>REC</span>
+        </div>
+    </div>
+
+    <!-- Settings Panel (Slide-in) -->
+    <div id="settingsPanel" class="settings-panel hidden">
+        <div class="settings-header">
+            <h3>Settings</h3>
+            <button id="closeSettings" class="close-btn">&times;</button>
+        </div>
+        <div class="settings-content">
+            <div class="settings-section">
+                <h4>General</h4>
                 <div class="setting-group">
                     <label>Language</label>
                     <select id="language">
@@ -70,148 +180,150 @@
                         <button id="fontIncrease" class="font-btn">A+</button>
                     </div>
                 </div>
-                <div class="setting-group" id="timestampsGroup">
-                    <label>Show Timestamps</label>
-                    <label class="toggle">
-                        <input type="checkbox" id="showTimestamps">
-                        <span class="toggle-slider"></span>
-                    </label>
-                    <span class="setting-hint" id="timestampsHint"></span>
-                </div>
-                <div class="setting-group">
-                    <label>Auto-save to Browser</label>
-                    <label class="toggle">
-                        <input type="checkbox" id="autoSave" checked>
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="setting-group">
-                    <label>Noise Reduction</label>
-                    <label class="toggle">
-                        <input type="checkbox" id="noiseReduction">
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
-                <div class="setting-group">
-                    <label>Debug Logs</label>
-                    <label class="toggle">
-                        <input type="checkbox" id="debugMode" checked>
-                        <span class="toggle-slider"></span>
-                    </label>
-                </div>
             </div>
-        </div>
 
-        <!-- Main Controls -->
-        <div class="main-controls">
-            <div class="control-group primary-controls">
-                <button id="startBtn" class="btn btn-start" title="Start (Space)">
-                    <span class="btn-icon">&#9658;</span>
-                    <span>Start</span>
-                </button>
-                <button id="stopBtn" class="btn btn-stop" disabled title="Stop (Space)">
-                    <span class="btn-icon">&#9632;</span>
-                    <span>Stop</span>
-                </button>
-                <button id="recordBtn" class="btn btn-record" disabled title="Record Audio (R)">
-                    <span class="btn-icon">&#9679;</span>
-                    <span>Record</span>
-                </button>
+            <div class="settings-section">
+                <h4>Transcription</h4>
+                <div class="setting-group">
+                    <div class="setting-row">
+                        <div>
+                            <label>Live Mode</label>
+                            <span class="setting-desc">Faster display, unified text</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="liveMode">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <div class="setting-row">
+                        <div>
+                            <label>Auto Paragraph</label>
+                            <span class="setting-desc">Add breaks on pauses</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoParagraph" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <div class="setting-row">
+                        <div>
+                            <label>Remove Fillers</label>
+                            <span class="setting-desc">Hide uh, um, like, etc.</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="removeFillers">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <div class="setting-row">
+                        <div>
+                            <label>Show Timestamps</label>
+                            <span class="setting-desc">Display time markers</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="showTimestamps">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div class="control-group secondary-controls">
-                <button id="copyBtn" class="btn btn-secondary" title="Copy (C)">
-                    <span>Copy</span>
-                </button>
-                <button id="undoBtn" class="btn btn-secondary" disabled title="Undo (Ctrl+Z)">
-                    <span>Undo</span>
-                </button>
-                <button id="editBtn" class="btn btn-secondary" title="Edit Mode (E)">
-                    <span>Edit</span>
-                </button>
-                <div class="export-dropdown">
-                    <button id="exportBtn" class="btn btn-secondary" title="Export (Ctrl+S)">
-                        <span>Export &#9662;</span>
+
+            <div class="settings-section">
+                <h4>Audio</h4>
+                <div class="setting-group">
+                    <div class="setting-row">
+                        <div>
+                            <label>Noise Reduction</label>
+                            <span class="setting-desc">Filter background noise</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="noiseReduction">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Storage</h4>
+                <div class="setting-group">
+                    <div class="setting-row">
+                        <div>
+                            <label>Auto-save</label>
+                            <span class="setting-desc">Save to browser storage</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="autoSave" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4>Advanced</h4>
+                <div class="setting-group">
+                    <button id="uploadBtn" class="settings-action-btn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        Upload Audio File
                     </button>
-                    <div class="export-menu hidden">
-                        <button id="exportTxt">Text (.txt)</button>
-                        <button id="exportSrt">Subtitles (.srt)</button>
-                        <button id="exportJson">JSON (.json)</button>
+                </div>
+                <div class="setting-group">
+                    <div class="setting-row">
+                        <div>
+                            <label>Debug Mode</label>
+                            <span class="setting-desc">Show console logs</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="debugMode">
+                            <span class="toggle-slider"></span>
+                        </label>
                     </div>
                 </div>
-                <button id="saveAudioBtn" class="btn btn-secondary" disabled title="Save Audio">
-                    <span>Save Audio</span>
-                </button>
-                <button id="clearBtn" class="btn btn-danger" title="Clear All">
-                    <span>Clear</span>
-                </button>
             </div>
         </div>
-
-        <!-- Quick Toggles Bar -->
-        <div class="quick-toggles">
-            <label class="quick-toggle" title="Faster display - all text unified">
-                <input type="checkbox" id="liveMode">
-                <span class="quick-toggle-slider"></span>
-                <span class="quick-toggle-label">Live Mode</span>
-            </label>
-            <label class="quick-toggle" title="Add paragraph breaks on pauses">
-                <input type="checkbox" id="autoParagraph" checked>
-                <span class="quick-toggle-slider"></span>
-                <span class="quick-toggle-label">Auto ¶</span>
-            </label>
-            <label class="quick-toggle" title="Remove uh, um, like, etc.">
-                <input type="checkbox" id="removeFillers">
-                <span class="quick-toggle-slider"></span>
-                <span class="quick-toggle-label">No Fillers</span>
-            </label>
-        </div>
-
-        <!-- Search Bar -->
-        <div class="search-bar">
-            <input type="text" id="searchInput" placeholder="Search in transcript... (Ctrl+F)" />
-            <span id="searchResults" class="search-results"></span>
-            <button id="searchPrev" class="search-nav" disabled>&lt;</button>
-            <button id="searchNext" class="search-nav" disabled>&gt;</button>
-            <button id="clearSearch" class="search-clear">&times;</button>
-        </div>
-
-        <!-- Status Bar -->
-        <div class="status-bar">
-            <div class="status-left">
-                <span id="connectionIndicator" class="connection-indicator" title="API Connection">
-                    <span class="connection-dot"></span>
-                </span>
-                <span id="status" class="status">Ready</span>
-                <span id="recordingIndicator" class="recording-indicator" style="display:none;">
-                    <span class="rec-dot"></span> REC
-                </span>
-            </div>
-            <div class="status-center">
-                <div class="audio-meter-container" title="Microphone Level">
-                    <div id="audioMeter" class="audio-meter">
-                        <div id="audioLevel" class="audio-level"></div>
-                    </div>
-                    <span id="audioStatus" class="audio-status">MIC</span>
-                </div>
-                <span id="duration" class="duration">00:00:00</span>
-            </div>
-            <div class="status-right">
-                <span id="wordCount" class="stat">0 words</span>
-                <span class="stat-divider">|</span>
-                <span id="wpm" class="stat">0 WPM</span>
-            </div>
-        </div>
-
-        <!-- Transcript Container -->
-        <div class="transcript-wrapper">
-            <div class="transcript-container" id="transcriptContainer">
-                <div id="transcript" class="transcript" contenteditable="false">
-                    <span class="placeholder">Click Start or press Space to begin transcribing...</span>
-                </div>
-            </div>
-        </div>
-
     </div>
+    <div id="settingsOverlay" class="settings-overlay hidden"></div>
+
+    <!-- Export Menu -->
+    <div id="exportMenu" class="export-menu hidden">
+        <div class="export-menu-content">
+            <h4>Export As</h4>
+            <button id="exportTxt" class="export-option">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                Text (.txt)
+            </button>
+            <button id="exportSrt" class="export-option">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/>
+                </svg>
+                Subtitles (.srt)
+            </button>
+            <button id="exportJson" class="export-option">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+                </svg>
+                JSON (.json)
+            </button>
+            <button id="saveAudioBtn" class="export-option" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+                </svg>
+                Save Recording
+            </button>
+        </div>
+    </div>
+    <div id="exportOverlay" class="export-overlay hidden"></div>
 
     <div id="toast" class="toast hidden"></div>
 
@@ -278,7 +390,7 @@
                 <button id="transcribeBackground" class="btn btn-secondary hidden">
                     <span>Run in Background</span>
                 </button>
-                <p class="server-hint">Run <code>python whisper_server.py</code> first</p>
+                <p class="server-hint">Run <code>py whisper_server.py</code> first</p>
                 <button id="setupGuideBtn" class="btn btn-link">Setup Guide</button>
             </div>
         </div>

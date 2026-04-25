@@ -115,8 +115,8 @@ class LiveTranscriber {
         this.initRecognition();
         this.loadFromStorage();
 
-        console.log('%c=== LIVE TRANSCRIBER PRO v3.7 ===', 'color: #ff6b6b; font-weight: bold; font-size: 16px');
-        console.log('%c[PERF] Background transcription + Time estimates', 'color: #00ff88');
+        console.log('%c=== LIVE TRANSCRIBER PRO v4.0 ===', 'color: #ff6b6b; font-weight: bold; font-size: 16px');
+        console.log('%c[UI] Modern Clean Design', 'color: #00ff88');
         console.log('%cColor Guide:', 'font-weight: bold');
         console.log('%c  GREEN = INTERIM (real-time, ~500ms delay)', 'color: #00ff88');
         console.log('%c  CYAN = FINAL (confirmed, 1-3s delay)', 'color: #00d9ff');
@@ -156,52 +156,50 @@ class LiveTranscriber {
 
     initUI() {
         this.els = {
-            start: document.getElementById('startBtn'),
-            stop: document.getElementById('stopBtn'),
+            // New UI elements
+            micBtn: document.getElementById('micBtn'),
             record: document.getElementById('recordBtn'),
             clear: document.getElementById('clearBtn'),
             export: document.getElementById('exportBtn'),
             exportTxt: document.getElementById('exportTxt'),
             exportSrt: document.getElementById('exportSrt'),
             exportJson: document.getElementById('exportJson'),
-            exportMenu: document.querySelector('.export-menu'),
+            exportMenu: document.getElementById('exportMenu'),
+            exportOverlay: document.getElementById('exportOverlay'),
             copy: document.getElementById('copyBtn'),
             undo: document.getElementById('undoBtn'),
             edit: document.getElementById('editBtn'),
             saveAudio: document.getElementById('saveAudioBtn'),
             transcript: document.getElementById('transcript'),
-            transcriptContainer: document.querySelector('.transcript-container'),
-            status: document.getElementById('status'),
+            transcriptContainer: document.getElementById('transcriptContainer'),
             duration: document.getElementById('duration'),
             language: document.getElementById('language'),
             recordingIndicator: document.getElementById('recordingIndicator'),
             wordCount: document.getElementById('wordCount'),
-            wpm: document.getElementById('wpm'),
             themeToggle: document.getElementById('themeToggle'),
             settingsBtn: document.getElementById('settingsBtn'),
             settingsPanel: document.getElementById('settingsPanel'),
+            settingsOverlay: document.getElementById('settingsOverlay'),
             closeSettings: document.getElementById('closeSettings'),
             fontDecrease: document.getElementById('fontDecrease'),
             fontIncrease: document.getElementById('fontIncrease'),
             fontSizeDisplay: document.getElementById('fontSizeDisplay'),
             autoParagraph: document.getElementById('autoParagraph'),
             showTimestamps: document.getElementById('showTimestamps'),
-            timestampsGroup: document.getElementById('timestampsGroup'),
-            timestampsHint: document.getElementById('timestampsHint'),
             autoSave: document.getElementById('autoSave'),
             removeFillers: document.getElementById('removeFillers'),
             noiseReductionToggle: document.getElementById('noiseReduction'),
             liveModeToggle: document.getElementById('liveMode'),
             debugModeToggle: document.getElementById('debugMode'),
-            audioMeter: document.getElementById('audioMeter'),
-            audioLevel: document.getElementById('audioLevel'),
-            audioStatus: document.getElementById('audioStatus'),
-            connectionIndicator: document.getElementById('connectionIndicator'),
+            audioVisualizer: document.getElementById('audioVisualizer'),
+            searchToggle: document.getElementById('searchToggle'),
+            searchBar: document.getElementById('searchBar'),
             searchInput: document.getElementById('searchInput'),
             searchResults: document.getElementById('searchResults'),
             searchPrev: document.getElementById('searchPrev'),
             searchNext: document.getElementById('searchNext'),
             clearSearch: document.getElementById('clearSearch'),
+            contextActions: document.getElementById('contextActions'),
             toast: document.getElementById('toast'),
             // Upload modal
             uploadBtn: document.getElementById('uploadBtn'),
@@ -232,15 +230,18 @@ class LiveTranscriber {
         this.whisperServerUrl = 'http://localhost:5000';
         this.isTranscribing = false;
 
-        // Main controls
-        this.els.start.onclick = () => {
-            this.log('[ACTION] User clicked START button', 'event');
-            this.start();
+        // Main mic button - toggles start/stop
+        this.els.micBtn.onclick = () => {
+            if (this.listening) {
+                this.log('[ACTION] User clicked MIC button to STOP', 'event');
+                this.stop();
+            } else {
+                this.log('[ACTION] User clicked MIC button to START', 'event');
+                this.start();
+            }
         };
-        this.els.stop.onclick = () => {
-            this.log('[ACTION] User clicked STOP button', 'event');
-            this.stop();
-        };
+
+        // Context action buttons
         this.els.record.onclick = () => {
             this.log(`[ACTION] User clicked RECORD button (currently: ${this.isRecording ? 'recording' : 'not recording'})`, 'event');
             this.toggleRecording();
@@ -266,40 +267,59 @@ class LiveTranscriber {
             this.saveAudio();
         };
 
-        // Export dropdown
-        this.els.export.onclick = (e) => {
-            e.stopPropagation();
+        // Export menu (bottom sheet style)
+        this.els.export.onclick = () => {
             const isOpening = this.els.exportMenu.classList.contains('hidden');
             this.els.exportMenu.classList.toggle('hidden');
-            this.log(`[ACTION] User ${isOpening ? 'opened' : 'closed'} EXPORT dropdown`, 'event');
+            this.els.exportOverlay.classList.toggle('hidden');
+            this.log(`[ACTION] User ${isOpening ? 'opened' : 'closed'} EXPORT menu`, 'event');
+        };
+        this.els.exportOverlay.onclick = () => {
+            this.els.exportMenu.classList.add('hidden');
+            this.els.exportOverlay.classList.add('hidden');
         };
         this.els.exportTxt.onclick = () => {
             this.log(`[ACTION] User clicked EXPORT TXT (${this.fullTranscript.length} chars)`, 'event');
             this.exportAs('txt');
+            this.els.exportMenu.classList.add('hidden');
+            this.els.exportOverlay.classList.add('hidden');
         };
         this.els.exportSrt.onclick = () => {
             this.log(`[ACTION] User clicked EXPORT SRT (${this.segments.length} segments)`, 'event');
             this.exportAs('srt');
+            this.els.exportMenu.classList.add('hidden');
+            this.els.exportOverlay.classList.add('hidden');
         };
         this.els.exportJson.onclick = () => {
             this.log(`[ACTION] User clicked EXPORT JSON`, 'event');
             this.exportAs('json');
+            this.els.exportMenu.classList.add('hidden');
+            this.els.exportOverlay.classList.add('hidden');
         };
-        document.addEventListener('click', () => this.els.exportMenu.classList.add('hidden'));
 
-        // Settings
+        // Search toggle
+        this.els.searchToggle.onclick = () => {
+            this.els.searchBar.classList.toggle('hidden');
+            if (!this.els.searchBar.classList.contains('hidden')) {
+                this.els.searchInput.focus();
+            }
+        };
+
+        // Settings (slide-in panel)
         this.els.themeToggle.onclick = () => {
             this.log(`[ACTION] User clicked THEME toggle (current: ${this.settings.theme})`, 'event');
             this.toggleTheme();
         };
         this.els.settingsBtn.onclick = () => {
-            const isOpening = this.els.settingsPanel.classList.contains('hidden');
-            this.log(`[ACTION] User ${isOpening ? 'opened' : 'closed'} SETTINGS panel`, 'event');
-            this.toggleSettings();
+            this.log(`[ACTION] User opened SETTINGS panel`, 'event');
+            this.openSettings();
         };
         this.els.closeSettings.onclick = () => {
-            this.log(`[ACTION] User closed SETTINGS panel (X button)`, 'event');
-            this.toggleSettings();
+            this.log(`[ACTION] User closed SETTINGS panel`, 'event');
+            this.closeSettings();
+        };
+        this.els.settingsOverlay.onclick = () => {
+            this.closeSettings();
         };
         this.els.fontDecrease.onclick = () => {
             this.log(`[ACTION] User clicked FONT DECREASE (current: ${this.settings.fontSize}px)`, 'event');
@@ -478,8 +498,8 @@ class LiveTranscriber {
     initRecognition() {
         const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (!SR) {
-            this.setStatus('Not supported - use Chrome/Edge', 'error');
-            this.els.start.disabled = true;
+            this.showToast('Speech recognition not supported - use Chrome or Edge');
+            this.els.micBtn.disabled = true;
             return;
         }
 
@@ -497,10 +517,7 @@ class LiveTranscriber {
             this.captureCount = 0;
             this.hasReceivedResults = false;
             this.lastResultTime = performance.now();
-            this.setStatus('Connecting...', 'listening');
-            this.els.start.disabled = true;
-            this.els.stop.disabled = false;
-            this.els.record.disabled = false;
+            this.updateMicState(true);
             this.log('>>> RECOGNITION STARTED', 'event');
             this.log('[PERF] Waiting for first result from Google API (may take 5-10s)...', 'perf');
 
@@ -533,10 +550,7 @@ class LiveTranscriber {
                     this.updateConnectionState('error');
                 }
             } else {
-                this.setStatus('Stopped', '');
-                this.els.start.disabled = false;
-                this.els.stop.disabled = true;
-                this.els.record.disabled = true;
+                this.updateMicState(false);
             }
         };
 
@@ -1144,8 +1158,14 @@ class LiveTranscriber {
         this.log(`[SETTINGS] Theme: ${this.settings.theme}`, 'event');
     }
 
-    toggleSettings() {
-        this.els.settingsPanel.classList.toggle('hidden');
+    openSettings() {
+        this.els.settingsPanel.classList.remove('hidden');
+        this.els.settingsOverlay.classList.remove('hidden');
+    }
+
+    closeSettings() {
+        this.els.settingsPanel.classList.add('hidden');
+        this.els.settingsOverlay.classList.add('hidden');
     }
 
     updateLiveModeState() {
@@ -1178,11 +1198,8 @@ class LiveTranscriber {
         this.wordCount = words.length;
         this.els.wordCount.textContent = `${this.wordCount} words`;
 
-        if (this.sessionStartTime && this.wordCount > 0) {
-            const minutes = (Date.now() - this.sessionStartTime) / 60000;
-            const wpm = Math.round(this.wordCount / Math.max(minutes, 0.1));
-            this.els.wpm.textContent = `${wpm} WPM`;
-        }
+        // Update context actions visibility based on transcript content
+        this.updateContextActions();
     }
 
     checkSilence() {
@@ -1222,14 +1239,20 @@ class LiveTranscriber {
 
     // Status & Time
     setStatus(text, cls) {
-        this.els.status.textContent = text;
-        this.els.status.className = 'status ' + (cls || '');
+        // Status is now visual via mic button state
+        this.log(`[STATUS] ${text}`, 'info');
     }
 
     getTime() {
-        if (!this.startTime) return '00:00:00';
+        if (!this.startTime) return '00:00';
         const s = Math.floor((Date.now() - this.startTime) / 1000);
-        return [Math.floor(s/3600), Math.floor((s%3600)/60), s%60].map(n => String(n).padStart(2,'0')).join(':');
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        if (h > 0) {
+            return [h, m, sec].map(n => String(n).padStart(2, '0')).join(':');
+        }
+        return [m, sec].map(n => String(n).padStart(2, '0')).join(':');
     }
 
     // Recording
@@ -1364,11 +1387,11 @@ class LiveTranscriber {
         this.searchMatches = [];
         this.currentMatchIndex = -1;
         this.wordCount = 0;
-        this.els.duration.textContent = '00:00:00';
+        this.els.duration.textContent = '00:00';
         this.els.wordCount.textContent = '0 words';
-        this.els.wpm.textContent = '0 WPM';
         this.els.saveAudio.disabled = true;
         this.els.undo.disabled = true;
+        this.els.contextActions.classList.add('hidden');
         this.clearSearch();
         this.render('');
         localStorage.removeItem('transcriber_transcript');
@@ -1538,26 +1561,15 @@ class LiveTranscriber {
             const average = sum / dataArray.length;
             const level = Math.min(100, (average / 128) * 100);
 
-            // Update UI
-            this.els.audioLevel.style.width = level + '%';
-
-            // Color based on level
-            this.els.audioLevel.classList.remove('medium', 'high');
-            if (level > 80) {
-                this.els.audioLevel.classList.add('high');
-            } else if (level > 50) {
-                this.els.audioLevel.classList.add('medium');
+            // Update visualizer bars
+            if (this.els.audioVisualizer) {
+                const bars = this.els.audioVisualizer.querySelectorAll('.visualizer-bar');
+                bars.forEach((bar, i) => {
+                    const barLevel = Math.max(8, level * (0.5 + Math.random() * 0.5));
+                    bar.style.height = barLevel + 'px';
+                });
             }
-
-            // Update status text
-            if (level > 5) {
-                this.els.audioStatus.textContent = 'MIC';
-                this.els.audioStatus.classList.add('active');
-            } else {
-                this.els.audioStatus.textContent = 'MIC';
-                this.els.audioStatus.classList.remove('active');
-            }
-        }, 50);
+        }, 100);
     }
 
     stopAudioLevelMeter() {
@@ -1574,25 +1586,33 @@ class LiveTranscriber {
             this.audioStream = null;
         }
         this.analyser = null;
-
-        // Reset UI
-        this.els.audioLevel.style.width = '0%';
-        this.els.audioStatus.classList.remove('active');
     }
 
-    // ==================== CONNECTION STATE ====================
+    // ==================== UI STATE ====================
+
+    updateMicState(isListening) {
+        if (isListening) {
+            this.els.micBtn.classList.add('recording');
+            this.els.audioVisualizer.classList.add('active');
+            // Show context actions when listening
+            this.els.contextActions.classList.remove('hidden');
+        } else {
+            this.els.micBtn.classList.remove('recording');
+            this.els.audioVisualizer.classList.remove('active');
+        }
+    }
+
+    updateContextActions() {
+        // Show context actions if we have any transcript
+        if (this.fullTranscript.length > 0 || this.listening) {
+            this.els.contextActions.classList.remove('hidden');
+        } else {
+            this.els.contextActions.classList.add('hidden');
+        }
+    }
 
     updateConnectionState(state) {
         this.connectionState = state;
-        this.els.connectionIndicator.className = 'connection-indicator ' + state;
-
-        const titles = {
-            disconnected: 'Disconnected',
-            connecting: 'Connecting to speech API...',
-            connected: 'Connected - Listening',
-            error: 'Connection error'
-        };
-        this.els.connectionIndicator.title = titles[state] || state;
         this.log(`[CONNECTION] State: ${state}`, 'event');
     }
 
