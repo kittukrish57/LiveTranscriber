@@ -248,55 +248,90 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 20px;
+    padding: 10px 20px;
     background: var(--bg-secondary);
     border-top: 1px solid var(--border);
 }
 
-.status-item {
-    font-size: 14px;
-    color: var(--text-secondary);
+.status-left, .status-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 100px;
+}
+
+.status-right {
+    justify-content: flex-end;
+}
+
+.status-center {
+    flex: 1;
+    display: flex;
+    justify-content: center;
 }
 
 .duration {
+    font-size: 14px;
     font-variant-numeric: tabular-nums;
     font-weight: 500;
+    color: var(--text-secondary);
 }
 
 .word-count {
     font-size: 13px;
+    color: var(--text-secondary);
 }
 
-/* Audio Visualizer */
-.audio-visualizer {
+/* Connection Indicator */
+.connection-indicator {
     display: flex;
     align-items: center;
-    gap: 3px;
-    height: 24px;
 }
 
-.visualizer-bar {
-    width: 4px;
+.connection-dot {
+    width: 8px;
     height: 8px;
+    border-radius: 50%;
     background: var(--text-muted);
-    border-radius: 2px;
-    transition: height 0.1s ease;
+    transition: background 0.3s;
 }
 
-.audio-visualizer.active .visualizer-bar {
-    background: var(--accent);
-    animation: visualize 0.5s ease-in-out infinite;
+.connection-indicator.connecting .connection-dot {
+    background: #ffa500;
+    animation: pulse-dot 1s ease-in-out infinite;
 }
 
-.audio-visualizer.active .visualizer-bar:nth-child(1) { animation-delay: 0s; }
-.audio-visualizer.active .visualizer-bar:nth-child(2) { animation-delay: 0.1s; }
-.audio-visualizer.active .visualizer-bar:nth-child(3) { animation-delay: 0.2s; }
-.audio-visualizer.active .visualizer-bar:nth-child(4) { animation-delay: 0.1s; }
-.audio-visualizer.active .visualizer-bar:nth-child(5) { animation-delay: 0s; }
+.connection-indicator.connected .connection-dot {
+    background: var(--accent-secondary);
+}
 
-@keyframes visualize {
-    0%, 100% { height: 8px; }
-    50% { height: 20px; }
+.connection-indicator.error .connection-dot {
+    background: var(--danger);
+}
+
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* Mic Level Meter */
+.mic-level-container {
+    width: 120px;
+}
+
+.mic-level {
+    height: 6px;
+    background: var(--bg-card);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.mic-level-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+    border-radius: 3px;
+    transition: width 0.1s ease;
 }
 
 /* Action Bar */
@@ -304,8 +339,8 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 24px;
-    padding: 20px;
+    gap: 20px;
+    padding: 12px 20px;
     background: var(--bg-secondary);
     border-top: 1px solid var(--border);
 }
@@ -314,15 +349,14 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 6px;
-    padding: 12px 20px;
+    gap: 4px;
+    padding: 8px 16px;
     background: transparent;
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
     border-radius: var(--radius-sm);
     transition: all 0.2s;
-    min-width: 70px;
 }
 
 .action-btn:hover {
@@ -331,20 +365,20 @@ body {
 }
 
 .action-btn svg {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
 }
 
 .action-btn span {
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 500;
 }
 
 /* Mic Button */
 .mic-btn {
     position: relative;
-    width: 72px;
-    height: 72px;
+    width: 56px;
+    height: 56px;
     border: none;
     background: linear-gradient(135deg, var(--accent), #0088cc);
     border-radius: 50%;
@@ -354,6 +388,7 @@ body {
     justify-content: center;
     box-shadow: 0 4px 20px var(--accent-glow);
     transition: all 0.3s ease;
+    flex-shrink: 0;
 }
 
 .mic-btn:hover {
@@ -421,20 +456,14 @@ body {
     100% { transform: scale(1.5); opacity: 0; }
 }
 
-/* Context Actions */
+/* Context Actions - Now inline in action bar */
 .context-actions {
-    position: fixed;
-    bottom: 140px;
-    left: 50%;
-    transform: translateX(-50%);
     display: flex;
-    gap: 8px;
-    padding: 12px 16px;
+    gap: 4px;
+    padding: 8px 12px;
     background: var(--bg-card);
-    border-radius: var(--radius);
-    box-shadow: 0 8px 32px var(--shadow);
+    border-radius: var(--radius-sm);
     border: 1px solid var(--border);
-    z-index: 100;
 }
 
 .context-actions.hidden {
@@ -443,15 +472,15 @@ body {
 
 .context-btn {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 4px;
-    padding: 10px 16px;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
     background: transparent;
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    border-radius: var(--radius-sm);
+    border-radius: 8px;
     transition: all 0.2s;
 }
 
@@ -466,13 +495,12 @@ body {
 }
 
 .context-btn svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
 }
 
 .context-btn span {
-    font-size: 11px;
-    font-weight: 500;
+    display: none;
 }
 
 /* Recording Indicator */

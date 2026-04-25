@@ -191,7 +191,8 @@ class LiveTranscriber {
             noiseReductionToggle: document.getElementById('noiseReduction'),
             liveModeToggle: document.getElementById('liveMode'),
             debugModeToggle: document.getElementById('debugMode'),
-            audioVisualizer: document.getElementById('audioVisualizer'),
+            connectionIndicator: document.getElementById('connectionIndicator'),
+            micLevelFill: document.getElementById('micLevelFill'),
             searchToggle: document.getElementById('searchToggle'),
             searchBar: document.getElementById('searchBar'),
             searchInput: document.getElementById('searchInput'),
@@ -1561,13 +1562,9 @@ class LiveTranscriber {
             const average = sum / dataArray.length;
             const level = Math.min(100, (average / 128) * 100);
 
-            // Update visualizer bars
-            if (this.els.audioVisualizer) {
-                const bars = this.els.audioVisualizer.querySelectorAll('.visualizer-bar');
-                bars.forEach((bar, i) => {
-                    const barLevel = Math.max(8, level * (0.5 + Math.random() * 0.5));
-                    bar.style.height = barLevel + 'px';
-                });
+            // Update mic level meter
+            if (this.els.micLevelFill) {
+                this.els.micLevelFill.style.width = level + '%';
             }
         }, 100);
     }
@@ -1593,12 +1590,15 @@ class LiveTranscriber {
     updateMicState(isListening) {
         if (isListening) {
             this.els.micBtn.classList.add('recording');
-            this.els.audioVisualizer.classList.add('active');
-            // Show context actions when listening
             this.els.contextActions.classList.remove('hidden');
+            this.updateConnectionState('connecting');
         } else {
             this.els.micBtn.classList.remove('recording');
-            this.els.audioVisualizer.classList.remove('active');
+            this.updateConnectionState('disconnected');
+            // Reset mic level
+            if (this.els.micLevelFill) {
+                this.els.micLevelFill.style.width = '0%';
+            }
         }
     }
 
@@ -1613,6 +1613,16 @@ class LiveTranscriber {
 
     updateConnectionState(state) {
         this.connectionState = state;
+        if (this.els.connectionIndicator) {
+            this.els.connectionIndicator.className = 'connection-indicator ' + state;
+            const titles = {
+                disconnected: 'Disconnected',
+                connecting: 'Connecting to speech API...',
+                connected: 'Connected - Listening',
+                error: 'Connection error'
+            };
+            this.els.connectionIndicator.title = titles[state] || state;
+        }
         this.log(`[CONNECTION] State: ${state}`, 'event');
     }
 

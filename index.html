@@ -63,17 +63,20 @@
 
         <!-- Status Bar -->
         <div class="status-bar">
-            <div class="status-item">
+            <div class="status-left">
+                <span id="connectionIndicator" class="connection-indicator" title="API Status">
+                    <span class="connection-dot"></span>
+                </span>
                 <span id="duration" class="duration">00:00</span>
             </div>
-            <div class="audio-visualizer" id="audioVisualizer">
-                <div class="visualizer-bar"></div>
-                <div class="visualizer-bar"></div>
-                <div class="visualizer-bar"></div>
-                <div class="visualizer-bar"></div>
-                <div class="visualizer-bar"></div>
+            <div class="status-center">
+                <div class="mic-level-container">
+                    <div id="micLevel" class="mic-level">
+                        <div id="micLevelFill" class="mic-level-fill"></div>
+                    </div>
+                </div>
             </div>
-            <div class="status-item">
+            <div class="status-right">
                 <span id="wordCount" class="word-count">0 words</span>
             </div>
         </div>
@@ -84,8 +87,31 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
                 </svg>
-                <span>Copy</span>
             </button>
+
+            <!-- Context Actions inline -->
+            <div id="contextActions" class="context-actions hidden">
+                <button id="recordBtn" class="context-btn" title="Record Audio">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <circle cx="12" cy="12" r="6"/>
+                    </svg>
+                </button>
+                <button id="undoBtn" class="context-btn" title="Undo">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
+                    </svg>
+                </button>
+                <button id="editBtn" class="context-btn" title="Edit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                </button>
+                <button id="clearBtn" class="context-btn danger" title="Clear">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    </svg>
+                </button>
+            </div>
 
             <button id="micBtn" class="mic-btn" title="Start/Stop (Space)">
                 <div class="mic-btn-inner">
@@ -97,42 +123,12 @@
                         <rect x="6" y="6" width="12" height="12" rx="2"/>
                     </svg>
                 </div>
-                <div class="mic-pulse"></div>
             </button>
 
             <button id="exportBtn" class="action-btn" title="Export">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
                 </svg>
-                <span>Export</span>
-            </button>
-        </div>
-
-        <!-- Context Actions (shown when needed) -->
-        <div id="contextActions" class="context-actions hidden">
-            <button id="recordBtn" class="context-btn" title="Record Audio">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <circle cx="12" cy="12" r="8"/>
-                </svg>
-                <span>Record</span>
-            </button>
-            <button id="undoBtn" class="context-btn" title="Undo">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
-                </svg>
-                <span>Undo</span>
-            </button>
-            <button id="editBtn" class="context-btn" title="Edit">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                </svg>
-                <span>Edit</span>
-            </button>
-            <button id="clearBtn" class="context-btn danger" title="Clear">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                </svg>
-                <span>Clear</span>
             </button>
         </div>
 
