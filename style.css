@@ -1693,29 +1693,51 @@ body {
     }
 
     .action-bar {
-        padding: 16px;
-        gap: 16px;
+        padding: 10px 12px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom));
+        gap: 8px;
+        justify-content: space-around;
     }
 
     .mic-btn {
-        width: 64px;
-        height: 64px;
+        width: 56px;
+        height: 56px;
+        flex-shrink: 0;
     }
 
     .mic-btn svg {
-        width: 28px;
-        height: 28px;
+        width: 26px;
+        height: 26px;
     }
 
     .action-btn {
-        padding: 10px 14px;
-        min-width: 60px;
+        padding: 8px 10px;
+        min-width: auto;
     }
 
+    .action-btn svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .record-btn {
+        padding: 8px 10px;
+    }
+
+    /* Context actions - compact on mobile */
     .context-actions {
-        bottom: 130px;
-        width: calc(100% - 32px);
-        justify-content: center;
+        gap: 2px;
+        padding: 6px 8px;
+    }
+
+    .context-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .context-btn svg {
+        width: 16px;
+        height: 16px;
     }
 
     .settings-panel {
@@ -1732,6 +1754,33 @@ body {
 
     .placeholder-text {
         font-size: 16px;
+    }
+}
+
+/* Extra small screens (iPhone SE, small phones) */
+@media (max-width: 380px) {
+    .action-bar {
+        gap: 6px;
+        padding: 8px 8px;
+        padding-bottom: calc(8px + env(safe-area-inset-bottom));
+    }
+
+    .mic-btn {
+        width: 50px;
+        height: 50px;
+    }
+
+    .action-btn {
+        padding: 6px 8px;
+    }
+
+    .context-actions {
+        padding: 4px 6px;
+    }
+
+    .context-btn {
+        width: 28px;
+        height: 28px;
     }
 }
 
