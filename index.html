@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Transcriber Pro</title>
+    <link rel="stylesheet" href="style.css">
+
+    <!-- PWA Support -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00d9ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Transcriber">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">&#9432;</span>
+                <h1>Live Transcriber</h1>
+            </div>
+            <div class="header-controls">
+                <button id="uploadBtn" class="icon-btn" title="Upload Audio File">
+                    <span>&#128193;</span>
+                </button>
+                <button id="themeToggle" class="icon-btn" title="Toggle Theme (T)">
+                    <span class="theme-icon">&#9790;</span>
+                </button>
+                <button id="settingsBtn" class="icon-btn" title="Settings">
+                    <span>&#9881;</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Settings Panel -->
+        <div id="settingsPanel" class="settings-panel hidden">
+            <div class="settings-header">
+                <h3>Settings</h3>
+                <button id="closeSettings" class="close-btn">&times;</button>
+            </div>
+            <div class="settings-content">
+                <div class="setting-group">
+                    <label>Language</label>
+                    <select id="language">
+                        <option value="en-US">English (US)</option>
+                        <option value="en-GB">English (UK)</option>
+                        <option value="en-IN">English (India)</option>
+                        <option value="es-ES">Spanish</option>
+                        <option value="fr-FR">French</option>
+                        <option value="de-DE">German</option>
+                        <option value="hi-IN">Hindi</option>
+                        <option value="te-IN">Telugu</option>
+                        <option value="ta-IN">Tamil</option>
+                        <option value="ja-JP">Japanese</option>
+                        <option value="ko-KR">Korean</option>
+                        <option value="zh-CN">Chinese</option>
+                        <option value="pt-BR">Portuguese</option>
+                        <option value="ru-RU">Russian</option>
+                        <option value="ar-SA">Arabic</option>
+                    </select>
+                </div>
+                <div class="setting-group">
+                    <label>Font Size</label>
+                    <div class="font-controls">
+                        <button id="fontDecrease" class="font-btn">A-</button>
+                        <span id="fontSizeDisplay">16px</span>
+                        <button id="fontIncrease" class="font-btn">A+</button>
+                    </div>
+                </div>
+                <div class="setting-group" id="timestampsGroup">
+                    <label>Show Timestamps</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="showTimestamps">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="setting-hint" id="timestampsHint"></span>
+                </div>
+                <div class="setting-group">
+                    <label>Auto-save to Browser</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="autoSave" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label>Noise Reduction</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="noiseReduction">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="setting-group">
+                    <label>Debug Logs</label>
+                    <label class="toggle">
+                        <input type="checkbox" id="debugMode" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Controls -->
+        <div class="main-controls">
+            <div class="control-group primary-controls">
+                <button id="startBtn" class="btn btn-start" title="Start (Space)">
+                    <span class="btn-icon">&#9658;</span>
+                    <span>Start</span>
+                </button>
+                <button id="stopBtn" class="btn btn-stop" disabled title="Stop (Space)">
+                    <span class="btn-icon">&#9632;</span>
+                    <span>Stop</span>
+                </button>
+                <button id="recordBtn" class="btn btn-record" disabled title="Record Audio (R)">
+                    <span class="btn-icon">&#9679;</span>
+                    <span>Record</span>
+                </button>
+            </div>
+            <div class="control-group secondary-controls">
+                <button id="copyBtn" class="btn btn-secondary" title="Copy (C)">
+                    <span>Copy</span>
+                </button>
+                <button id="undoBtn" class="btn btn-secondary" disabled title="Undo (Ctrl+Z)">
+                    <span>Undo</span>
+                </button>
+                <button id="editBtn" class="btn btn-secondary" title="Edit Mode (E)">
+                    <span>Edit</span>
+                </button>
+                <div class="export-dropdown">
+                    <button id="exportBtn" class="btn btn-secondary" title="Export (Ctrl+S)">
+                        <span>Export &#9662;</span>
+                    </button>
+                    <div class="export-menu hidden">
+                        <button id="exportTxt">Text (.txt)</button>
+                        <button id="exportSrt">Subtitles (.srt)</button>
+                        <button id="exportJson">JSON (.json)</button>
+                    </div>
+                </div>
+                <button id="saveAudioBtn" class="btn btn-secondary" disabled title="Save Audio">
+                    <span>Save Audio</span>
+                </button>
+                <button id="clearBtn" class="btn btn-danger" title="Clear All">
+                    <span>Clear</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Toggles Bar -->
+        <div class="quick-toggles">
+            <label class="quick-toggle" title="Faster display - all text unified">
+                <input type="checkbox" id="liveMode">
+                <span class="quick-toggle-slider"></span>
+                <span class="quick-toggle-label">Live Mode</span>
+            </label>
+            <label class="quick-toggle" title="Add paragraph breaks on pauses">
+                <input type="checkbox" id="autoParagraph" checked>
+                <span class="quick-toggle-slider"></span>
+                <span class="quick-toggle-label">Auto ¶</span>
+            </label>
+            <label class="quick-toggle" title="Remove uh, um, like, etc.">
+                <input type="checkbox" id="removeFillers">
+                <span class="quick-toggle-slider"></span>
+                <span class="quick-toggle-label">No Fillers</span>
+            </label>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search in transcript... (Ctrl+F)" />
+            <span id="searchResults" class="search-results"></span>
+            <button id="searchPrev" class="search-nav" disabled>&lt;</button>
+            <button id="searchNext" class="search-nav" disabled>&gt;</button>
+            <button id="clearSearch" class="search-clear">&times;</button>
+        </div>
+
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <div class="status-left">
+                <span id="connectionIndicator" class="connection-indicator" title="API Connection">
+                    <span class="connection-dot"></span>
+                </span>
+                <span id="status" class="status">Ready</span>
+                <span id="recordingIndicator" class="recording-indicator" style="display:none;">
+                    <span class="rec-dot"></span> REC
+                </span>
+            </div>
+            <div class="status-center">
+                <div class="audio-meter-container" title="Microphone Level">
+                    <div id="audioMeter" class="audio-meter">
+                        <div id="audioLevel" class="audio-level"></div>
+                    </div>
+                    <span id="audioStatus" class="audio-status">MIC</span>
+                </div>
+                <span id="duration" class="duration">00:00:00</span>
+            </div>
+            <div class="status-right">
+                <span id="wordCount" class="stat">0 words</span>
+                <span class="stat-divider">|</span>
+                <span id="wpm" class="stat">0 WPM</span>
+            </div>
+        </div>
+
+        <!-- Transcript Container -->
+        <div class="transcript-wrapper">
+            <div class="transcript-container" id="transcriptContainer">
+                <div id="transcript" class="transcript" contenteditable="false">
+                    <span class="placeholder">Click Start or press Space to begin transcribing...</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Upload Audio File</h3>
+                <button id="closeUploadModal" class="close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="upload-zone" id="uploadZone">
+                    <input type="file" id="audioFileInput" accept="audio/*,.webm,.mp3,.wav,.m4a,.ogg,.flac" hidden>
+                    <div class="upload-icon">&#127911;</div>
+                    <p>Drag & drop audio file here</p>
+                    <p class="upload-hint">or click to browse</p>
+                    <p class="upload-formats">Supports: MP3, WAV, M4A, WebM, OGG, FLAC</p>
+                </div>
+                <div id="uploadFileInfo" class="upload-file-info hidden">
+                    <span class="file-icon">&#127925;</span>
+                    <span id="uploadFileName" class="file-name">filename.mp3</span>
+                    <span id="uploadFileSize" class="file-size">2.5 MB</span>
+                    <button id="removeUploadFile" class="remove-file">&times;</button>
+                </div>
+                <div class="upload-options">
+                    <div class="upload-option">
+                        <label>Audio Language</label>
+                        <select id="uploadLanguage">
+                            <option value="auto">Auto-detect</option>
+                            <option value="en">English</option>
+                            <option value="hi">Hindi</option>
+                            <option value="te">Telugu</option>
+                            <option value="ta">Tamil</option>
+                            <option value="es">Spanish</option>
+                            <option value="fr">French</option>
+                            <option value="de">German</option>
+                            <option value="ja">Japanese</option>
+                            <option value="ko">Korean</option>
+                            <option value="zh">Chinese</option>
+                            <option value="pt">Portuguese</option>
+                            <option value="ru">Russian</option>
+                            <option value="ar">Arabic</option>
+                        </select>
+                    </div>
+                </div>
+                <div id="uploadProgress" class="upload-progress hidden">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <p id="uploadStatus" class="upload-status">Connecting to Whisper server...</p>
+                    <p id="uploadEstimate" class="upload-estimate"></p>
+                </div>
+                <div class="upload-server-status">
+                    <span id="serverStatus" class="server-status disconnected">
+                        <span class="server-dot"></span>
+                        <span>Server: Checking...</span>
+                    </span>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="transcribeBtn" class="btn btn-start" disabled>
+                    <span>Transcribe</span>
+                </button>
+                <button id="transcribeBackground" class="btn btn-secondary hidden">
+                    <span>Run in Background</span>
+                </button>
+                <p class="server-hint">Run <code>python whisper_server.py</code> first</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
