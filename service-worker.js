@@ -1,5 +1,5 @@
 // Live Transcriber Pro - Service Worker
-const CACHE_NAME = 'transcriber-v6.1';
+const CACHE_NAME = 'transcriber-v6.2';
 const ASSETS = [
   './',
   './index.html',
