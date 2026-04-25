@@ -54,12 +54,12 @@ body {
     position: relative;
 }
 
-/* Header */
+/* Header - Compact */
 .header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 20px;
+    padding: 10px 16px;
     background: var(--bg-secondary);
     border-bottom: 1px solid var(--border);
 }
@@ -67,16 +67,16 @@ body {
 .logo {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .logo-icon {
-    font-size: 24px;
+    font-size: 20px;
     color: var(--accent);
 }
 
 .logo h1 {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
     font-weight: 600;
     color: var(--text-primary);
 }
@@ -243,12 +243,12 @@ body {
     margin-bottom: 16px;
 }
 
-/* Status Bar */
+/* Status Bar - Compact */
 .status-bar {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
+    padding: 6px 16px;
     background: var(--bg-secondary);
     border-top: 1px solid var(--border);
 }
