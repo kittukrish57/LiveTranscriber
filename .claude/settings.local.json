@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m http.server 8080)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8080/)",
+      "Bash(node -c app.js)",
+      "Bash(py --version)",
+      "Bash(where py *)",
+      "Bash(where python3 *)",
+      "Bash(dir \"C:\\\\Python*\" /b)",
+      "Bash(dir \"%LOCALAPPDATA%\\\\Programs\\\\Python\" /b)"
+    ]
+  }
+}

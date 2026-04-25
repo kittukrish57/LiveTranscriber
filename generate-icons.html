@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Generate PWA Icons</title>
+    <style>
+        body { font-family: Arial; padding: 40px; background: #1a1a2e; color: white; }
+        canvas { border: 1px solid #333; margin: 10px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 10px; }
+        .info { color: #00d9ff; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>PWA Icon Generator</h1>
+    <p>Click buttons to download icons, then save them in the /icons folder</p>
+
+    <div>
+        <canvas id="icon192" width="192" height="192"></canvas>
+        <canvas id="icon512" width="512" height="512"></canvas>
+    </div>
+
+    <button onclick="download(192)">Download icon-192.png</button>
+    <button onclick="download(512)">Download icon-512.png</button>
+
+    <p class="info">After downloading, move the files to: icons/icon-192.png and icons/icon-512.png</p>
+
+    <script>
+        function drawIcon(ctx, size) {
+            const s = size / 512;
+
+            // Background gradient
+            const grad = ctx.createLinearGradient(0, 0, size, size);
+            grad.addColorStop(0, '#1a1a2e');
+            grad.addColorStop(1, '#0f0f1a');
+
+            // Rounded rect background
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.roundRect(0, 0, size, size, 80 * s);
+            ctx.fill();
+
+            // Microphone
+            ctx.fillStyle = '#00d9ff';
+            ctx.strokeStyle = '#00d9ff';
+            ctx.lineWidth = 16 * s;
+            ctx.lineCap = 'round';
+
+            // Mic head (circle)
+            ctx.beginPath();
+            ctx.arc(256 * s, 200 * s, 60 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Mic body
+            ctx.beginPath();
+            ctx.roundRect(236 * s, 260 * s, 40 * s, 100 * s, 20 * s);
+            ctx.fill();
+
+            // Mic holder curve
+            ctx.beginPath();
+            ctx.moveTo(176 * s, 280 * s);
+            ctx.quadraticCurveTo(176 * s, 360 * s, 256 * s, 360 * s);
+            ctx.quadraticCurveTo(336 * s, 360 * s, 336 * s, 280 * s);
+            ctx.stroke();
+
+            // Stand
+            ctx.beginPath();
+            ctx.moveTo(256 * s, 360 * s);
+            ctx.lineTo(256 * s, 400 * s);
+            ctx.stroke();
+
+            // Base
+            ctx.beginPath();
+            ctx.moveTo(206 * s, 400 * s);
+            ctx.lineTo(306 * s, 400 * s);
+            ctx.stroke();
+        }
+
+        // Draw both sizes
+        drawIcon(document.getElementById('icon192').getContext('2d'), 192);
+        drawIcon(document.getElementById('icon512').getContext('2d'), 512);
+
+        function download(size) {
+            const canvas = document.getElementById('icon' + size);
+            const link = document.createElement('a');
+            link.download = 'icon-' + size + '.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+</html>

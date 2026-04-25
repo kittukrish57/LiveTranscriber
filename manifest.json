@@ -2,7 +2,7 @@
   "name": "Live Transcriber Pro",
   "short_name": "Transcriber",
   "description": "Real-time speech to text transcription",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f0f1a",
   "theme_color": "#00d9ff",
