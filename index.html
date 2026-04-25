@@ -9,6 +9,7 @@
     <!-- PWA Support -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#00d9ff">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Transcriber">
@@ -47,6 +48,7 @@
             <button id="searchNext" class="search-nav" disabled>&gt;</button>
             <button id="clearSearch" class="search-clear">&times;</button>
         </div>
+
 
         <!-- Transcript Area (Main Content) -->
         <div class="transcript-wrapper">
@@ -89,13 +91,18 @@
                 </svg>
             </button>
 
+            <!-- Record Button - Always Visible -->
+            <button id="recordBtn" class="action-btn record-btn" title="Record Audio (R)">
+                <svg class="rec-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <circle cx="12" cy="12" r="6"/>
+                </svg>
+                <svg class="stop-rec-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+            </button>
+
             <!-- Context Actions inline -->
             <div id="contextActions" class="context-actions hidden">
-                <button id="recordBtn" class="context-btn" title="Record Audio">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <circle cx="12" cy="12" r="6"/>
-                    </svg>
-                </button>
                 <button id="undoBtn" class="context-btn" title="Undo">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/>
@@ -113,7 +120,7 @@
                 </button>
             </div>
 
-            <button id="micBtn" class="mic-btn" title="Start/Stop (Space)">
+            <button id="micBtn" class="mic-btn" title="Start Transcription (Space)">
                 <div class="mic-btn-inner">
                     <svg class="mic-icon" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
@@ -136,6 +143,17 @@
         <div id="recordingIndicator" class="recording-indicator hidden">
             <span class="rec-dot"></span>
             <span>REC</span>
+        </div>
+
+        <!-- Transcription Progress Indicator -->
+        <div id="transcribeProgress" class="transcribe-progress hidden">
+            <div class="transcribe-spinner"></div>
+            <div class="transcribe-info">
+                <span id="transcribeStatus">Transcribing audio...</span>
+                <div class="transcribe-bar">
+                    <div id="transcribeBarFill" class="transcribe-bar-fill"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -216,18 +234,6 @@
                         </label>
                     </div>
                 </div>
-                <div class="setting-group">
-                    <div class="setting-row">
-                        <div>
-                            <label>Show Timestamps</label>
-                            <span class="setting-desc">Display time markers</span>
-                        </div>
-                        <label class="toggle">
-                            <input type="checkbox" id="showTimestamps">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
             </div>
 
             <div class="settings-section">
@@ -271,6 +277,21 @@
                         </svg>
                         Upload Audio File
                     </button>
+                </div>
+                <div class="setting-group">
+                    <div class="setting-row">
+                        <div>
+                            <label>Highlight Keywords</label>
+                            <span class="setting-desc">Highlight specific words in transcript</span>
+                        </div>
+                        <label class="toggle">
+                            <input type="checkbox" id="highlightKeywords">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div id="keywordsInput" class="keywords-input hidden">
+                        <input type="text" id="keywords" placeholder="Enter keywords separated by commas (e.g., important, urgent, action)">
+                    </div>
                 </div>
                 <div class="setting-group">
                     <div class="setting-row">
@@ -332,7 +353,7 @@
             </div>
             <div class="modal-body">
                 <div class="upload-zone" id="uploadZone">
-                    <input type="file" id="audioFileInput" accept="audio/*,.webm,.mp3,.wav,.m4a,.ogg,.flac" hidden>
+                    <input type="file" id="audioFileInput" accept="audio/*,video/*,.webm,.mp3,.wav,.m4a,.ogg,.flac,.mp4,.mkv,.avi,.mov" multiple hidden>
                     <div class="upload-icon">&#127911;</div>
                     <p>Drag & drop audio file here</p>
                     <p class="upload-hint">or click to browse</p>
@@ -343,6 +364,13 @@
                     <span id="uploadFileName" class="file-name">filename.mp3</span>
                     <span id="uploadFileSize" class="file-size">2.5 MB</span>
                     <button id="removeUploadFile" class="remove-file">&times;</button>
+                </div>
+                <div id="uploadQueue" class="upload-queue hidden">
+                    <div class="queue-header">
+                        <span>Files to transcribe:</span>
+                        <button id="clearQueue" class="clear-queue-btn">Clear All</button>
+                    </div>
+                    <div id="queueList" class="queue-list"></div>
                 </div>
                 <div class="upload-options">
                     <div class="upload-option">
@@ -450,6 +478,42 @@
                 <div class="setup-done">
                     <p>Once the server shows "Running on http://localhost:5000", come back here and upload your file!</p>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Recording Modal -->
+    <div id="saveRecordingModal" class="modal hidden">
+        <div class="modal-content save-recording-modal">
+            <div class="modal-header">
+                <h3>Save Recording?</h3>
+            </div>
+            <div class="modal-body save-recording-body">
+                <div class="save-recording-icon">&#127908;</div>
+                <p>You have an unsaved audio recording.</p>
+                <p class="save-recording-hint">Would you like to save it?</p>
+            </div>
+            <div class="modal-footer save-recording-footer">
+                <button id="saveRecordingYes" class="btn btn-primary">Save Recording</button>
+                <button id="saveRecordingNo" class="btn btn-secondary">Discard</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Recovery Modal -->
+    <div id="sessionModal" class="modal hidden">
+        <div class="modal-content session-modal">
+            <div class="modal-header">
+                <h3>Previous Session Found</h3>
+            </div>
+            <div class="modal-body session-modal-body">
+                <div class="session-icon">&#128196;</div>
+                <p>You have a transcript from a previous session.</p>
+                <p class="session-hint">Would you like to continue or start fresh?</p>
+            </div>
+            <div class="modal-footer session-modal-footer">
+                <button id="sessionContinue" class="btn btn-primary">Continue</button>
+                <button id="sessionClear" class="btn btn-secondary">Clear &amp; Start Fresh</button>
             </div>
         </div>
     </div>

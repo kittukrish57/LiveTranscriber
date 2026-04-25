@@ -24,7 +24,9 @@ class LiveTranscriber {
             fontSize: 16,
             autoParagraph: true,
             liveMode: false, // Live Mode: shows all text as green (faster perceived speed)
-            showTimestamps: false,
+            highlightKeywords: false,
+            keywords: '',
+            autoPunctuation: true, // Auto-improve punctuation
             autoSave: true,
             removeFillers: false,
             noiseReduction: false,
@@ -159,6 +161,12 @@ class LiveTranscriber {
             // New UI elements
             micBtn: document.getElementById('micBtn'),
             record: document.getElementById('recordBtn'),
+            sessionModal: document.getElementById('sessionModal'),
+            sessionContinue: document.getElementById('sessionContinue'),
+            sessionClear: document.getElementById('sessionClear'),
+            saveRecordingModal: document.getElementById('saveRecordingModal'),
+            saveRecordingYes: document.getElementById('saveRecordingYes'),
+            saveRecordingNo: document.getElementById('saveRecordingNo'),
             clear: document.getElementById('clearBtn'),
             export: document.getElementById('exportBtn'),
             exportTxt: document.getElementById('exportTxt'),
@@ -185,11 +193,13 @@ class LiveTranscriber {
             fontIncrease: document.getElementById('fontIncrease'),
             fontSizeDisplay: document.getElementById('fontSizeDisplay'),
             autoParagraph: document.getElementById('autoParagraph'),
-            showTimestamps: document.getElementById('showTimestamps'),
             autoSave: document.getElementById('autoSave'),
             removeFillers: document.getElementById('removeFillers'),
             noiseReductionToggle: document.getElementById('noiseReduction'),
             liveModeToggle: document.getElementById('liveMode'),
+            highlightKeywordsToggle: document.getElementById('highlightKeywords'),
+            keywordsInput: document.getElementById('keywordsInput'),
+            keywords: document.getElementById('keywords'),
             debugModeToggle: document.getElementById('debugMode'),
             connectionIndicator: document.getElementById('connectionIndicator'),
             micLevelFill: document.getElementById('micLevelFill'),
@@ -220,14 +230,23 @@ class LiveTranscriber {
             transcribeBtn: document.getElementById('transcribeBtn'),
             transcribeBackground: document.getElementById('transcribeBackground'),
             uploadEstimate: document.getElementById('uploadEstimate'),
+            // Batch upload queue
+            uploadQueue: document.getElementById('uploadQueue'),
+            queueList: document.getElementById('queueList'),
+            clearQueue: document.getElementById('clearQueue'),
             // Setup guide modal
             setupGuideBtn: document.getElementById('setupGuideBtn'),
             setupGuideModal: document.getElementById('setupGuideModal'),
-            closeSetupGuide: document.getElementById('closeSetupGuide')
+            closeSetupGuide: document.getElementById('closeSetupGuide'),
+            // Transcribe progress indicator
+            transcribeProgress: document.getElementById('transcribeProgress'),
+            transcribeStatus: document.getElementById('transcribeStatus'),
+            transcribeBarFill: document.getElementById('transcribeBarFill')
         };
 
         // Upload state
         this.uploadedFile = null;
+        this.uploadQueue = []; // Batch upload queue
         this.whisperServerUrl = 'http://localhost:5000';
         this.isTranscribing = false;
 
@@ -247,6 +266,22 @@ class LiveTranscriber {
             this.log(`[ACTION] User clicked RECORD button (currently: ${this.isRecording ? 'recording' : 'not recording'})`, 'event');
             this.toggleRecording();
         };
+
+        // Session modal buttons
+        if (this.els.sessionContinue) {
+            this.els.sessionContinue.onclick = () => {
+                this.log('[ACTION] User clicked CONTINUE previous session', 'event');
+                this.hideSessionModal();
+            };
+        }
+        if (this.els.sessionClear) {
+            this.els.sessionClear.onclick = () => {
+                this.log('[ACTION] User clicked CLEAR previous session', 'event');
+                this.hideSessionModal();
+                this.clear();
+            };
+        }
+
         this.els.clear.onclick = () => {
             this.log('[ACTION] User clicked CLEAR button', 'event');
             this.confirmClear();
@@ -267,6 +302,26 @@ class LiveTranscriber {
             this.log(`[ACTION] User clicked SAVE AUDIO button (blob: ${this.audioBlob ? this.audioBlob.size + ' bytes' : 'none'})`, 'event');
             this.saveAudio();
         };
+
+        // Save recording modal handlers
+        if (this.els.saveRecordingYes) {
+            this.els.saveRecordingYes.onclick = () => {
+                this.log('[ACTION] User clicked SAVE RECORDING', 'event');
+                this.hideSaveRecordingModal();
+                // Wait for audioBlob to be ready then save
+                setTimeout(() => this.saveAudio(), 100);
+            };
+        }
+        if (this.els.saveRecordingNo) {
+            this.els.saveRecordingNo.onclick = () => {
+                this.log('[ACTION] User clicked DISCARD RECORDING', 'event');
+                this.hideSaveRecordingModal();
+                this.audioChunks = [];
+                this.audioBlob = null;
+                this.els.saveAudio.disabled = true;
+                this.showToast('Recording discarded');
+            };
+        }
 
         // Export menu (bottom sheet style)
         this.els.export.onclick = () => {
@@ -346,12 +401,6 @@ class LiveTranscriber {
                 this.showToast('Live Mode: Faster display, all text unified');
             }
         };
-        this.els.showTimestamps.onchange = () => {
-            this.settings.showTimestamps = this.els.showTimestamps.checked;
-            this.saveSettings();
-            this.render('');
-            this.log(`[SETTINGS] Show Timestamps: ${this.settings.showTimestamps ? 'ON' : 'OFF'}`, 'event');
-        };
         this.els.autoSave.onchange = () => {
             this.settings.autoSave = this.els.autoSave.checked;
             this.saveSettings();
@@ -378,6 +427,37 @@ class LiveTranscriber {
             this.saveSettings();
             console.log(`%c[${performance.now().toFixed(0)}ms] [SETTINGS] Debug Mode: ${this.debugMode ? 'ON' : 'OFF'}`, 'color: #a29bfe');
         };
+        if (this.els.highlightKeywordsToggle) {
+            this.els.highlightKeywordsToggle.onchange = () => {
+                this.settings.highlightKeywords = this.els.highlightKeywordsToggle.checked;
+                if (this.els.keywordsInput) {
+                    this.els.keywordsInput.classList.toggle('hidden', !this.settings.highlightKeywords);
+                }
+                this.saveSettings();
+                this.render(''); // Re-render to apply highlighting
+                this.log(`[SETTINGS] Keyword Highlighting: ${this.settings.highlightKeywords ? 'ON' : 'OFF'}`, 'event');
+            };
+        }
+        if (this.els.keywords) {
+            this.els.keywords.onchange = () => {
+                // Validate and clean keywords
+                let keywords = this.els.keywords.value
+                    .split(',')
+                    .map(k => k.trim())
+                    .filter(k => k.length > 0 && k.length <= 50) // Max 50 chars per keyword
+                    .slice(0, 20); // Max 20 keywords
+
+                this.settings.keywords = keywords.join(', ');
+                this.els.keywords.value = this.settings.keywords; // Update input with cleaned value
+                this.saveSettings();
+                this.render(''); // Re-render to apply highlighting
+
+                if (keywords.length > 0) {
+                    this.showToast(`${keywords.length} keyword(s) active`);
+                }
+                this.log(`[SETTINGS] Keywords updated: ${keywords.length} keywords`, 'event');
+            };
+        }
         this.els.language.onchange = () => {
             this.settings.language = this.els.language.value;
             if (this.recognition) this.recognition.lang = this.els.language.value;
@@ -435,8 +515,9 @@ class LiveTranscriber {
             if (e.target === this.els.uploadModal) this.closeUploadModal();
         };
         this.els.uploadZone.onclick = () => this.els.audioFileInput.click();
-        this.els.audioFileInput.onchange = (e) => this.handleFileSelect(e.target.files[0]);
+        this.els.audioFileInput.onchange = (e) => this.handleFileSelect(e.target.files);
         this.els.removeUploadFile.onclick = () => this.clearUploadFile();
+        if (this.els.clearQueue) this.els.clearQueue.onclick = () => this.clearUploadQueue();
         this.els.transcribeBtn.onclick = () => this.transcribeUploadedFile(false);
         this.els.transcribeBackground.onclick = () => {
             this.transcribeUploadedFile(true);
@@ -937,6 +1018,11 @@ class LiveTranscriber {
             }
         }
 
+        // Auto-punctuation improvements
+        if (this.settings.autoPunctuation) {
+            t = this.improvePunctuation(t);
+        }
+
         // Capitalize first letter of transcript
         if (!this.fullTranscript) {
             t = t.charAt(0).toUpperCase() + t.slice(1);
@@ -944,6 +1030,64 @@ class LiveTranscriber {
 
         // Capitalize I (important for readability)
         t = t.replace(/\bi\b/g, 'I');
+
+        return t;
+    }
+
+    improvePunctuation(text) {
+        let t = text;
+
+        // Capitalize after sentence endings
+        t = t.replace(/([.!?])\s+([a-z])/g, (m, p, c) => p + ' ' + c.toUpperCase());
+
+        // Add periods after common sentence-ending patterns (question words at start)
+        const questionStarters = /^(what|where|when|why|who|how|is|are|do|does|did|can|could|would|will|should)\b/i;
+        if (questionStarters.test(t) && !t.endsWith('?') && !t.endsWith('.') && !t.endsWith('!')) {
+            t = t + '?';
+        }
+
+        // Capitalize common proper nouns and abbreviations
+        const properNouns = {
+            'monday': 'Monday', 'tuesday': 'Tuesday', 'wednesday': 'Wednesday',
+            'thursday': 'Thursday', 'friday': 'Friday', 'saturday': 'Saturday', 'sunday': 'Sunday',
+            'january': 'January', 'february': 'February', 'march': 'March', 'april': 'April',
+            'may': 'May', 'june': 'June', 'july': 'July', 'august': 'August',
+            'september': 'September', 'october': 'October', 'november': 'November', 'december': 'December',
+            'google': 'Google', 'microsoft': 'Microsoft', 'apple': 'Apple', 'amazon': 'Amazon',
+            'facebook': 'Facebook', 'twitter': 'Twitter', 'instagram': 'Instagram', 'youtube': 'YouTube',
+            'ai': 'AI', 'api': 'API', 'url': 'URL', 'html': 'HTML', 'css': 'CSS', 'javascript': 'JavaScript'
+        };
+
+        for (const [lower, proper] of Object.entries(properNouns)) {
+            const regex = new RegExp(`\\b${lower}\\b`, 'gi');
+            t = t.replace(regex, proper);
+        }
+
+        // Fix common contractions
+        t = t.replace(/\bi m\b/gi, "I'm");
+        t = t.replace(/\bdont\b/gi, "don't");
+        t = t.replace(/\bcant\b/gi, "can't");
+        t = t.replace(/\bwont\b/gi, "won't");
+        t = t.replace(/\bwere\b/gi, "we're");
+        t = t.replace(/\bthats\b/gi, "that's");
+        t = t.replace(/\bits\b/gi, "it's"); // Note: this might incorrectly change possessive "its"
+        t = t.replace(/\byoure\b/gi, "you're");
+        t = t.replace(/\btheyre\b/gi, "they're");
+        t = t.replace(/\bive\b/gi, "I've");
+        t = t.replace(/\byouve\b/gi, "you've");
+        t = t.replace(/\bweve\b/gi, "we've");
+        t = t.replace(/\bisnt\b/gi, "isn't");
+        t = t.replace(/\barent\b/gi, "aren't");
+        t = t.replace(/\bwasnt\b/gi, "wasn't");
+        t = t.replace(/\bwerent\b/gi, "weren't");
+        t = t.replace(/\bhasnt\b/gi, "hasn't");
+        t = t.replace(/\bhavent\b/gi, "haven't");
+        t = t.replace(/\bhadnt\b/gi, "hadn't");
+        t = t.replace(/\bdoesnt\b/gi, "doesn't");
+        t = t.replace(/\bdidnt\b/gi, "didn't");
+        t = t.replace(/\bwouldnt\b/gi, "wouldn't");
+        t = t.replace(/\bcouldnt\b/gi, "couldn't");
+        t = t.replace(/\bshouldnt\b/gi, "shouldn't");
 
         return t;
     }
@@ -990,6 +1134,11 @@ class LiveTranscriber {
                     html += `<span class="live"> ${this.esc(displayInterim)}</span>`;
                 }
             }
+        }
+
+        // Apply keyword highlighting
+        if (this.settings.highlightKeywords && this.settings.keywords) {
+            html = this.highlightKeywords(html);
         }
 
         // Apply search highlighting
@@ -1072,6 +1221,18 @@ class LiveTranscriber {
         });
     }
 
+    highlightKeywords(html) {
+        if (!this.settings.keywords) return html;
+        const keywords = this.settings.keywords.split(',').map(k => k.trim()).filter(k => k.length > 0);
+        if (keywords.length === 0) return html;
+
+        // Build regex pattern for all keywords (word boundaries for whole words)
+        const pattern = keywords.map(k => `\\b${k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`).join('|');
+        const regex = new RegExp(`(${pattern})`, 'gi');
+
+        return html.replace(regex, '<span class="keyword-highlight">$1</span>');
+    }
+
     clearSearch() {
         this.els.searchInput.value = '';
         this.searchMatches = [];
@@ -1135,12 +1296,22 @@ class LiveTranscriber {
         this.els.fontSizeDisplay.textContent = this.settings.fontSize + 'px';
         this.els.autoParagraph.checked = this.settings.autoParagraph;
         this.els.liveModeToggle.checked = this.settings.liveMode;
-        this.els.showTimestamps.checked = this.settings.showTimestamps;
         this.els.autoSave.checked = this.settings.autoSave;
         this.els.removeFillers.checked = this.settings.removeFillers;
         this.els.noiseReductionToggle.checked = this.settings.noiseReduction;
         this.els.debugModeToggle.checked = this.settings.debugMode;
         this.els.language.value = this.settings.language;
+
+        // Keyword highlighting
+        if (this.els.highlightKeywordsToggle) {
+            this.els.highlightKeywordsToggle.checked = this.settings.highlightKeywords;
+        }
+        if (this.els.keywordsInput) {
+            this.els.keywordsInput.classList.toggle('hidden', !this.settings.highlightKeywords);
+        }
+        if (this.els.keywords) {
+            this.els.keywords.value = this.settings.keywords || '';
+        }
 
         // Apply to instance variables
         this.removeFillers = this.settings.removeFillers;
@@ -1170,19 +1341,7 @@ class LiveTranscriber {
     }
 
     updateLiveModeState() {
-        const isLiveMode = this.settings.liveMode;
-
-        // Disable Show Timestamps when Live Mode is ON (timestamps don't work in Live Mode)
-        if (this.els.timestampsGroup) {
-            this.els.timestampsGroup.classList.toggle('disabled', isLiveMode);
-            this.els.showTimestamps.disabled = isLiveMode;
-
-            if (isLiveMode) {
-                this.els.timestampsHint.textContent = '(disabled in Live Mode)';
-            } else {
-                this.els.timestampsHint.textContent = '';
-            }
-        }
+        // Placeholder for live mode state updates
     }
 
     changeFontSize(delta) {
@@ -1228,14 +1387,27 @@ class LiveTranscriber {
         try {
             const saved = localStorage.getItem('transcriber_transcript');
             const segments = localStorage.getItem('transcriber_segments');
-            if (saved) {
+            if (saved && saved.trim()) {
                 this.fullTranscript = saved;
                 this.segments = segments ? JSON.parse(segments) : [];
                 this.render('');
                 this.updateStats();
                 this.log('[STORAGE] Loaded previous transcript', 'info');
+
+                // Show session recovery modal
+                this.showSessionModal();
             }
         } catch (e) {}
+    }
+
+    showSessionModal() {
+        if (!this.els.sessionModal) return;
+        this.els.sessionModal.classList.remove('hidden');
+    }
+
+    hideSessionModal() {
+        if (!this.els.sessionModal) return;
+        this.els.sessionModal.classList.add('hidden');
     }
 
     // Status & Time
@@ -1275,8 +1447,8 @@ class LiveTranscriber {
             };
             this.mediaRecorder.start(1000);
             this.isRecording = true;
-            this.els.record.innerHTML = '<span class="btn-icon">&#9632;</span><span>Stop Rec</span>';
             this.els.record.classList.add('recording');
+            this.els.record.title = 'Stop Recording (R)';
             this.els.recordingIndicator.style.display = 'flex';
             this.showToast('Recording started');
             return true;
@@ -1286,13 +1458,34 @@ class LiveTranscriber {
         }
     }
 
-    stopRecording() {
+    stopRecording(showSavePrompt = false) {
         if (this.mediaRecorder?.state !== 'inactive') this.mediaRecorder.stop();
         this.isRecording = false;
-        this.els.record.innerHTML = '<span class="btn-icon">&#9679;</span><span>Record</span>';
         this.els.record.classList.remove('recording');
+        this.els.record.title = 'Record Audio (R)';
         this.els.recordingIndicator.style.display = 'none';
-        this.showToast('Recording stopped');
+
+        // Show save recording modal if we have audio data
+        if (showSavePrompt && this.audioChunks.length > 0) {
+            this.showSaveRecordingModal();
+        } else if (this.audioChunks.length > 0) {
+            // Manual stop - also show modal
+            this.showSaveRecordingModal();
+        } else {
+            this.showToast('Recording stopped');
+        }
+    }
+
+    showSaveRecordingModal() {
+        if (this.els.saveRecordingModal) {
+            this.els.saveRecordingModal.classList.remove('hidden');
+        }
+    }
+
+    hideSaveRecordingModal() {
+        if (this.els.saveRecordingModal) {
+            this.els.saveRecordingModal.classList.add('hidden');
+        }
     }
 
     // Main controls
@@ -1344,6 +1537,10 @@ class LiveTranscriber {
         this.stopWatchdog();
         this.resetProgressiveCommit();
 
+        // IMMEDIATE UI feedback - don't wait for API
+        this.updateMicState(false);
+        this.log('[STOP] UI updated immediately', 'event');
+
         // Reset scroll state
         this.userScrolledUp = false;
 
@@ -1361,7 +1558,11 @@ class LiveTranscriber {
             this.captureInterim('manual-stop');
         }
         this.recognition?.stop();
-        if (this.isRecording) this.stopRecording();
+
+        // If recording was active, stop with save prompt
+        const wasRecording = this.isRecording;
+        if (this.isRecording) this.stopRecording(true);
+
         if (this.timer) { clearInterval(this.timer); this.timer = null; }
         this.render('');
 
@@ -1427,10 +1628,10 @@ class LiveTranscriber {
         this.showToast('Audio saved');
     }
 
-    showToast(msg, isError = false) {
+    showToast(msg, isError = false, duration = 2000) {
         this.els.toast.textContent = msg;
         this.els.toast.className = 'toast show' + (isError ? ' error' : '');
-        setTimeout(() => { this.els.toast.className = 'toast hidden'; }, 2000);
+        setTimeout(() => { this.els.toast.className = 'toast hidden'; }, duration);
     }
 
     // Export
@@ -1443,9 +1644,21 @@ class LiveTranscriber {
 
         switch (format) {
             case 'txt':
-                let text = this.fullTranscript.trim();
-                if (text && !'.!?'.includes(text.slice(-1))) text += '.';
-                content = `TRANSCRIPT\n${new Date().toLocaleString()}\nDuration: ${this.els.duration.textContent}\nWords: ${this.wordCount}\n\n${text}`;
+                // Build text with timestamps from segments
+                let txtContent = this.segments.map(seg => {
+                    const mins = Math.floor(seg.start / 60);
+                    const secs = Math.floor(seg.start % 60);
+                    const timestamp = `[${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}]`;
+                    return `${timestamp} ${seg.text}`;
+                }).join('\n');
+
+                // Fallback if no segments
+                if (!txtContent && this.fullTranscript) {
+                    txtContent = this.fullTranscript.trim();
+                    if (txtContent && !'.!?'.includes(txtContent.slice(-1))) txtContent += '.';
+                }
+
+                content = `TRANSCRIPT\n${new Date().toLocaleString()}\nDuration: ${this.els.duration.textContent}\nWords: ${this.wordCount}\n\n${txtContent}`;
                 filename = `transcript_${date}.txt`;
                 type = 'text/plain';
                 break;
@@ -1470,9 +1683,11 @@ class LiveTranscriber {
         }
 
         const a = document.createElement('a');
-        a.href = URL.createObjectURL(new Blob([content], { type }));
+        const blobUrl = URL.createObjectURL(new Blob([content], { type }));
+        a.href = blobUrl;
         a.download = filename;
         a.click();
+        URL.revokeObjectURL(blobUrl);
         this.showToast(`Exported ${format.toUpperCase()}`);
     }
 
@@ -1589,11 +1804,13 @@ class LiveTranscriber {
 
     updateMicState(isListening) {
         if (isListening) {
-            this.els.micBtn.classList.add('recording');
+            this.els.micBtn.classList.add('listening');
+            this.els.micBtn.title = 'Stop Transcription (Space)';
             this.els.contextActions.classList.remove('hidden');
             this.updateConnectionState('connecting');
         } else {
-            this.els.micBtn.classList.remove('recording');
+            this.els.micBtn.classList.remove('listening');
+            this.els.micBtn.title = 'Start Transcription (Space)';
             this.updateConnectionState('disconnected');
             // Reset mic level
             if (this.els.micLevelFill) {
@@ -1756,37 +1973,127 @@ class LiveTranscriber {
         return false;
     }
 
-    handleFileSelect(file) {
-        if (!file) return;
+    handleFileSelect(files) {
+        if (!files || files.length === 0) return;
 
-        // Validate file type
-        const validTypes = ['audio/', 'video/webm'];
-        const isValid = validTypes.some(type => file.type.startsWith(type)) ||
-                       file.name.match(/\.(mp3|wav|m4a|webm|ogg|flac|aac|wma)$/i);
+        const validTypes = ['audio/', 'video/'];
+        const validExts = /\.(mp3|wav|m4a|webm|ogg|flac|aac|wma|mp4|mkv|avi|mov)$/i;
+        const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB max per file
+        const MAX_TOTAL_SIZE = 1024 * 1024 * 1024; // 1 GB total max
 
-        if (!isValid) {
-            this.showToast('Please select an audio file', true);
+        let addedCount = 0;
+        let skippedCount = 0;
+        let totalSize = this.uploadQueue.reduce((sum, item) => sum + item.file.size, 0);
+
+        for (const file of files) {
+            // Validate file type
+            const isValidType = validTypes.some(type => file.type.startsWith(type)) || file.name.match(validExts);
+            if (!isValidType) {
+                skippedCount++;
+                continue;
+            }
+
+            // Validate file size
+            if (file.size === 0) {
+                this.showToast(`"${file.name}" is empty`, true);
+                skippedCount++;
+                continue;
+            }
+
+            if (file.size > MAX_FILE_SIZE) {
+                this.showToast(`"${file.name}" exceeds 500MB limit`, true);
+                skippedCount++;
+                continue;
+            }
+
+            // Check total queue size
+            if (totalSize + file.size > MAX_TOTAL_SIZE) {
+                this.showToast('Total queue size exceeds 1GB limit', true);
+                break;
+            }
+
+            this.uploadQueue.push({ file, status: 'pending' });
+            totalSize += file.size;
+            addedCount++;
+        }
+
+        if (addedCount === 0) {
+            if (skippedCount > 0) {
+                this.showToast('No valid files selected (check format/size)', true);
+            } else {
+                this.showToast('Please select audio/video files', true);
+            }
             return;
         }
 
-        this.uploadedFile = file;
+        if (skippedCount > 0) {
+            this.showToast(`Added ${addedCount} files, skipped ${skippedCount}`);
+        }
 
-        // Update UI
-        this.els.uploadZone.classList.add('hidden');
-        this.els.uploadFileInfo.classList.remove('hidden');
-        this.els.uploadFileName.textContent = file.name;
-        this.els.uploadFileSize.textContent = this.formatFileSize(file.size);
+        // For single file, use the simple UI
+        if (this.uploadQueue.length === 1) {
+            this.uploadedFile = this.uploadQueue[0].file;
+            this.els.uploadZone.classList.add('hidden');
+            this.els.uploadFileInfo.classList.remove('hidden');
+            this.els.uploadFileName.textContent = this.uploadedFile.name;
+            this.els.uploadFileSize.textContent = this.formatFileSize(this.uploadedFile.size);
+            if (this.els.uploadQueue) this.els.uploadQueue.classList.add('hidden');
+        } else {
+            // Multiple files - show queue
+            this.uploadedFile = this.uploadQueue[0].file;
+            this.els.uploadZone.classList.add('hidden');
+            this.els.uploadFileInfo.classList.add('hidden');
+            this.renderUploadQueue();
+        }
 
-        this.log(`[UPLOAD] File selected: ${file.name} (${this.formatFileSize(file.size)})`, 'event');
+        this.log(`[UPLOAD] ${addedCount} file(s) selected, queue size: ${this.uploadQueue.length}`, 'event');
         this.updateTranscribeButton();
+    }
+
+    renderUploadQueue() {
+        if (!this.els.uploadQueue || !this.els.queueList) return;
+
+        this.els.uploadQueue.classList.remove('hidden');
+        this.els.queueList.innerHTML = this.uploadQueue.map((item, i) => `
+            <div class="queue-item" data-index="${i}">
+                <span class="file-name">${item.file.name}</span>
+                <span class="file-size">${this.formatFileSize(item.file.size)}</span>
+                <span class="queue-status ${item.status}">${item.status === 'pending' ? 'Pending' : item.status === 'processing' ? 'Processing...' : item.status === 'done' ? 'Done' : 'Error'}</span>
+                ${item.status === 'pending' ? `<button class="remove-queue-item" onclick="window.transcriber.removeFromQueue(${i})">&times;</button>` : ''}
+            </div>
+        `).join('');
+    }
+
+    removeFromQueue(index) {
+        this.uploadQueue.splice(index, 1);
+        if (this.uploadQueue.length === 0) {
+            this.clearUploadFile();
+        } else if (this.uploadQueue.length === 1) {
+            this.uploadedFile = this.uploadQueue[0].file;
+            this.els.uploadQueue.classList.add('hidden');
+            this.els.uploadFileInfo.classList.remove('hidden');
+            this.els.uploadFileName.textContent = this.uploadedFile.name;
+            this.els.uploadFileSize.textContent = this.formatFileSize(this.uploadedFile.size);
+        } else {
+            this.uploadedFile = this.uploadQueue[0].file;
+            this.renderUploadQueue();
+        }
+        this.updateTranscribeButton();
+    }
+
+    clearUploadQueue() {
+        this.uploadQueue = [];
+        this.clearUploadFile();
     }
 
     clearUploadFile() {
         this.uploadedFile = null;
+        this.uploadQueue = [];
         this.els.audioFileInput.value = '';
         this.els.uploadZone.classList.remove('hidden');
         this.els.uploadFileInfo.classList.add('hidden');
         this.els.uploadProgress.classList.add('hidden');
+        if (this.els.uploadQueue) this.els.uploadQueue.classList.add('hidden');
         this.updateTranscribeButton();
     }
 
@@ -1798,13 +2105,19 @@ class LiveTranscriber {
 
     updateTranscribeButton() {
         const serverOk = this.els.serverStatus.classList.contains('connected');
-        const hasFile = this.uploadedFile !== null;
+        const hasFile = this.uploadedFile !== null || this.uploadQueue.length > 0;
         const notBusy = !this.isTranscribing;
         this.els.transcribeBtn.disabled = !(serverOk && hasFile && notBusy);
     }
 
     async transcribeUploadedFile(runInBackground = false) {
-        if (!this.uploadedFile || this.isTranscribing) return;
+        if ((!this.uploadedFile && this.uploadQueue.length === 0) || this.isTranscribing) return;
+
+        // Process queue if multiple files
+        if (this.uploadQueue.length > 1) {
+            await this.processUploadQueue(runInBackground);
+            return;
+        }
 
         const file = this.uploadedFile;
         const language = this.els.uploadLanguage.value;
@@ -1820,7 +2133,7 @@ class LiveTranscriber {
             ? `~${Math.ceil(estimatedSeconds / 60)} minutes`
             : `~${estimatedSeconds} seconds`;
 
-        // Show progress
+        // Show progress in modal
         this.els.uploadProgress.classList.remove('hidden');
         this.els.progressFill.style.width = '0%';
         this.els.progressFill.classList.add('indeterminate');
@@ -1829,10 +2142,12 @@ class LiveTranscriber {
         this.els.transcribeBtn.disabled = true;
         this.els.transcribeBackground.classList.remove('hidden');
 
-        // If running in background, show badge
-        if (runInBackground) {
-            this.showTranscriptionBadge('Transcribing...');
-        }
+        // ALWAYS show floating progress indicator (visible even if modal is closed)
+        this.showTranscribeProgress(`Transcribing: ${file.name} (0%)`);
+
+        // Start polling for progress
+        this.log('[PROGRESS] Starting progress polling...', 'event');
+        this.progressPollInterval = setInterval(() => this.pollTranscriptionProgress(), 1000);
 
         try {
             const formData = new FormData();
@@ -1841,7 +2156,7 @@ class LiveTranscriber {
 
             const startTime = performance.now();
 
-            this.els.uploadStatus.textContent = 'Transcribing audio... (this may take a few minutes)';
+            this.els.uploadStatus.textContent = 'Transcribing audio...';
 
             const response = await fetch(`${this.whisperServerUrl}/transcribe`, {
                 method: 'POST',
@@ -1856,6 +2171,9 @@ class LiveTranscriber {
             }
 
             const result = await response.json();
+
+            // Stop polling
+            this.stopProgressPolling();
 
             this.els.progressFill.classList.remove('indeterminate');
             this.els.progressFill.style.width = '100%';
@@ -1894,34 +2212,111 @@ class LiveTranscriber {
                 const wordCount = result.text.split(' ').length;
                 this.showToast(`Transcribed: ${wordCount} words`);
 
-                // Update badge if running in background
-                if (runInBackground) {
-                    this.showTranscriptionBadge(`Done! ${wordCount} words`, true);
-                    setTimeout(() => this.hideTranscriptionBadge(), 5000);
-                } else {
-                    // Close modal after short delay
-                    setTimeout(() => {
-                        this.closeUploadModal();
-                    }, 1500);
-                }
+                // Update floating progress to show completion
+                this.showTranscribeProgress(`Done! ${wordCount} words`, true);
+                setTimeout(() => this.hideTranscribeProgress(), 3000);
+
+                // Close modal after short delay (if not already closed)
+                setTimeout(() => {
+                    this.closeUploadModal();
+                }, 1500);
             }
 
         } catch (error) {
+            // Stop polling
+            this.stopProgressPolling();
+
             this.log(`[UPLOAD] Error: ${error.message}`, 'warning');
             this.els.progressFill.classList.remove('indeterminate');
             this.els.progressFill.style.width = '0%';
             this.els.uploadStatus.textContent = `Error: ${error.message}`;
             this.showToast('Transcription failed: ' + error.message, true);
 
-            if (runInBackground) {
-                this.showTranscriptionBadge('Failed!', true);
-                setTimeout(() => this.hideTranscriptionBadge(), 3000);
-            }
+            // Update floating progress to show error
+            this.showTranscribeProgress('Transcription failed!', true, true);
+            setTimeout(() => this.hideTranscribeProgress(), 3000);
         }
 
         this.isTranscribing = false;
         this.els.transcribeBackground.classList.add('hidden');
         this.updateTranscribeButton();
+    }
+
+    async processUploadQueue(runInBackground = false) {
+        const language = this.els.uploadLanguage.value;
+        this.isTranscribing = true;
+        this.els.transcribeBtn.disabled = true;
+
+        let successCount = 0;
+        let totalWords = 0;
+
+        this.showTranscribeProgress(`Processing 0/${this.uploadQueue.length} files...`);
+
+        for (let i = 0; i < this.uploadQueue.length; i++) {
+            const item = this.uploadQueue[i];
+            item.status = 'processing';
+            this.renderUploadQueue();
+
+            this.log(`[BATCH] Processing file ${i + 1}/${this.uploadQueue.length}: ${item.file.name}`, 'event');
+            this.showTranscribeProgress(`Processing ${i + 1}/${this.uploadQueue.length}: ${item.file.name}`);
+
+            try {
+                const formData = new FormData();
+                formData.append('file', item.file);
+                formData.append('language', language);
+
+                const response = await fetch(`${this.whisperServerUrl}/transcribe`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || 'Transcription failed');
+                }
+
+                const result = await response.json();
+                item.status = 'done';
+
+                if (result.text) {
+                    this.saveUndoState();
+                    const header = `[Transcribed from: ${item.file.name}]\n\n`;
+                    if (this.fullTranscript) {
+                        this.fullTranscript += '\n\n' + header + result.text;
+                    } else {
+                        this.fullTranscript = header + result.text;
+                    }
+
+                    if (result.segments) {
+                        for (const seg of result.segments) {
+                            this.segments.push({ text: seg.text, start: seg.start, end: seg.end, source: 'whisper-upload' });
+                        }
+                    }
+
+                    totalWords += result.text.split(' ').length;
+                    successCount++;
+                }
+            } catch (error) {
+                item.status = 'error';
+                this.log(`[BATCH] Error on ${item.file.name}: ${error.message}`, 'warning');
+            }
+
+            this.renderUploadQueue();
+        }
+
+        this.render('');
+        this.updateStats();
+        this.autoSaveToStorage();
+
+        this.showToast(`Batch complete: ${successCount}/${this.uploadQueue.length} files, ${totalWords} words`);
+        this.showTranscribeProgress(`Done! ${successCount} files, ${totalWords} words`, true);
+        setTimeout(() => this.hideTranscribeProgress(), 3000);
+
+        this.isTranscribing = false;
+        this.els.transcribeBackground.classList.add('hidden');
+        this.updateTranscribeButton();
+
+        setTimeout(() => this.closeUploadModal(), 1500);
     }
 
     showTranscriptionBadge(text, done = false) {
@@ -1936,6 +2331,84 @@ class LiveTranscriber {
     hideTranscriptionBadge() {
         const badge = document.getElementById('transcriptionBadge');
         if (badge) badge.remove();
+    }
+
+    async pollTranscriptionProgress() {
+        try {
+            const response = await fetch(`${this.whisperServerUrl}/progress`);
+            const data = await response.json();
+
+            if (data.active) {
+                const pct = data.progress || 0;
+                const elapsed = data.elapsed || 0;
+                const estimated = data.estimated || 0;
+                const remaining = Math.round(estimated - elapsed);
+                const overTime = elapsed - estimated;
+
+                // Format ETA string - show different messages based on state
+                let etaStr;
+                if (remaining > 0) {
+                    etaStr = `~${remaining}s remaining`;
+                } else if (overTime < 15) {
+                    etaStr = 'finishing...';
+                } else {
+                    etaStr = `${Math.round(elapsed)}s (still processing)`;
+                }
+
+                this.log(`[PROGRESS] Active: ${pct}% (${etaStr})`, 'info');
+
+                // Update floating progress indicator
+                if (this.els.transcribeStatus) {
+                    this.els.transcribeStatus.textContent = `Transcribing: ${pct}% (${etaStr})`;
+                }
+                if (this.els.transcribeBarFill) {
+                    this.els.transcribeBarFill.style.width = `${pct}%`;
+                }
+
+                // Update modal progress bar (if visible)
+                this.els.progressFill.classList.remove('indeterminate');
+                this.els.progressFill.style.width = `${pct}%`;
+                this.els.uploadStatus.textContent = `Transcribing... ${pct}% (${etaStr})`;
+            } else {
+                this.log('[PROGRESS] Not active', 'perf');
+            }
+        } catch (e) {
+            this.log(`[PROGRESS] Error: ${e.message}`, 'warning');
+        }
+    }
+
+    stopProgressPolling() {
+        if (this.progressPollInterval) {
+            clearInterval(this.progressPollInterval);
+            this.progressPollInterval = null;
+        }
+    }
+
+    showTranscribeProgress(text, done = false, isError = false) {
+        if (!this.els.transcribeProgress) return;
+        this.els.transcribeProgress.classList.remove('hidden');
+        this.els.transcribeStatus.textContent = text;
+
+        // Update progress bar
+        if (this.els.transcribeBarFill) {
+            this.els.transcribeBarFill.style.width = done ? '100%' : '0%';
+        }
+
+        // Change style based on state
+        if (done) {
+            this.els.transcribeProgress.style.background = isError
+                ? 'linear-gradient(135deg, #ff4466, #cc0033)'
+                : 'linear-gradient(135deg, #00ff88, #00cc66)';
+        } else {
+            this.els.transcribeProgress.style.background = 'linear-gradient(135deg, var(--accent), #0088cc)';
+        }
+    }
+
+    hideTranscribeProgress() {
+        if (!this.els.transcribeProgress) return;
+        this.els.transcribeProgress.classList.add('hidden');
+        // Reset background
+        this.els.transcribeProgress.style.background = 'linear-gradient(135deg, var(--accent), #0088cc)';
     }
 }
 
